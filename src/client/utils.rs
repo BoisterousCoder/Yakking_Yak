@@ -1,6 +1,7 @@
-use std::io;
+use std::{io, option};
+use base64;
 
-const fileExtention:&str = ".keys";
+const FILE_EXT:&str = ".keys";
 
 pub fn getUserIn(prompt:String) -> String{
     let mut line = String::new();
@@ -22,6 +23,20 @@ impl ConnectionData{
         return format!("{}:{}", self.server.split(":").next().unwrap(), self.group);
     }
     pub fn get_fileName(&self) -> String {
-        return self.get_storeName() + fileExtention;
+        return self.get_storeName() + FILE_EXT;
+    }
+}
+
+pub struct ServerMSG{
+	pub from:String,
+	pub kind:String,
+	pub body:String
+}
+impl ServerMSG{
+    pub fn fromData(&mut self, slice:&[u8]){
+        self.body = base64::encode(slice.to_vec())
+    }
+    pub fn toData(&self) -> Vec<u8>{
+        base64::decode(&self.body).unwrap()
     }
 }

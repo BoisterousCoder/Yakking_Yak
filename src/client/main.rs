@@ -19,6 +19,7 @@ use futures::stream::{SplitSink, StreamExt};
 mod utils;
 mod encrypter;
 mod store;
+mod serverhandlers;
 
 fn main() {
 	::std::env::set_var("RUST_LOG", "actix_web=info");
@@ -27,16 +28,20 @@ fn main() {
 	let sys = System::new("websocket-client");
 
 	Arbiter::spawn(async {
-		let senderConnData = utils::ConnectionData{
-			server: utils::getUserIn("Server:".to_string()),
-			group: utils::getUserIn("Group:".to_string()),
-			password: utils::getUserIn("Please enter your password".to_string())
+		// let senderConnData = utils::ConnectionData{
+		// 	server: utils::getUserIn("Server:".to_string()),
+		// 	group: utils::getUserIn("Group:".to_string()),
+		// 	password: utils::getUserIn("Please enter your password".to_string())
+		// };
+		let connData = utils::ConnectionData{
+			server: "localhost:4000".to_string(),
+			group: "test".to_string(),
+			password: "test".to_string()
 		};
-		encrypter::getContext(senderConnData.clone());
-		let ip = senderConnData.get_ip();
-		println!("Connecting to {}...", ip);
+		let senderStore = encrypter::getCryptStore(connData.clone());
+		println!("Connecting to {}...", connData.get_ip());
 		let (response, framed) = Client::new()
-			.ws(ip)
+			.ws(connData.get_ip())
 			.connect()
 			.await
 			.map_err(|e| {
@@ -70,6 +75,7 @@ struct ChatClient(SinkWrite<Message, SplitSink<Framed<BoxedSocket, Codec>, Messa
 #[derive(Message)]
 #[rtype(result = "()")]
 struct ClientCommand(String);
+
 
 impl Actor for ChatClient {
 	type Context = Context<Self>;
