@@ -33,15 +33,20 @@ fn main() {
 		// 	group: utils::getUserIn("Group:".to_string()),
 		// 	password: utils::getUserIn("Please enter your password".to_string())
 		// };
-		let connData = utils::ConnectionData{
+		let aliceConnData = utils::ConnectionData{
 			server: "localhost:4000".to_string(),
-			group: "test".to_string(),
-			password: "test".to_string()
+			group: "alice".to_string(),
+			password: "alice".to_string()
 		};
-		let senderStore = encrypter::getCryptStore(connData.clone());
-		println!("Connecting to {}...", connData.get_ip());
+		let bobConnData = utils::ConnectionData{
+			server: "localhost:4000".to_string(),
+			group: "bob".to_string(),
+			password: "bob".to_string()
+		};
+		let aliceStore = encrypter::getCryptStore(aliceConnData.clone());
+		println!("Connecting to {}...", aliceConnData.get_ip());
 		let (response, framed) = Client::new()
-			.ws(connData.get_ip())
+			.ws(aliceConnData.get_ip())
 			.connect()
 			.await
 			.map_err(|e| {
@@ -63,8 +68,8 @@ fn main() {
 				println!("error");
 				return;
 			}
-			
-			addr.do_send(ClientCommand(cmd));
+			let msg = utils::ServerMSG::new("Alice".to_string(), "test".to_string(), cmd);
+			addr.do_send(ClientCommand(msg.toString()));
 		});
 	});
 	sys.run().unwrap();
@@ -118,7 +123,8 @@ impl Handler<ClientCommand> for ChatClient {
 impl StreamHandler<Result<Frame, WsProtocolError>> for ChatClient {
 	fn handle(&mut self, msg: Result<Frame, WsProtocolError>, _: &mut Context<Self>) {
 		if let Ok(Frame::Text(txt)) = msg {
-			println!("Server: {:?}", txt)
+			let msg = utils::ServerMSG::fromServer(&txt.to_vec());
+			serverhandlers::onServerMSG(msg);
 		}
 	}
 
