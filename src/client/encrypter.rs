@@ -68,15 +68,42 @@ impl Crypto{
 		}
 	}
 }
-// pub struct Bundle{
-// 	data: PreKeyBundle
-// }
-// impl Bundle{
-// 	pub fn new(regId:u32, deviceId:i32, prekey:keys::PreKey, signedKey:keys::SignedPreKey, idKey:keys::IdentityKeyPair){
-// 		let builder = PreKeyBundle.builder();
-// 		builder.pre_key()
-// 	}
-// }
+pub struct KeyBundleWrapper{
+	preId: u32,
+	pre: Vec<u8>,
+	signedId: u32,
+	signed: Vec<u8>,
+	regId: u32,
+	deviceId: i32,
+	signature: Vec<u8>,
+	id: Vec<u8>
+}
+impl KeyBundleWrapper{
+	pub fn wrap(regId:u32, deviceId:i32, prekey:keys::PreKey, signedKey:keys::SessionSignedPreKey, idKey:keys::IdentityKeyPair) -> KeyBundleWrapper{
+		return KeyBundleWrapper{
+			preId: prekey.id(),
+			signedId: signedKey.id(),
+			regId:regId,
+			deviceId:deviceId,
+			pre: prekey.key_pair().public().serialize().unwrap().as_slice().to_vec(),
+			signed: signedKey.key_pair().public().serialize().unwrap().as_slice().to_vec(),
+			id: idKey.public().serialize().unwrap().as_slice().to_vec(),
+			signature: signedKey.signature().to_vec()
+		}
+	}
+	pub fn unwrap(&self, ctx:&Context) -> PreKeyBundle{
+		let mut builder = PreKeyBundle::builder();
+		let preKey = keys::PublicKey::decode_point(ctx, self.pre.as_slice()).unwrap();
+		let signedKey = keys::PublicKey::decode_point(ctx, self.signed.as_slice()).unwrap();
+		let idKey = keys::PublicKey::decode_point(ctx, self.id.as_slice()).unwrap();
+		builder = builder.pre_key(self.preId, &preKey);
+		builder = builder.signed_pre_key(self.signedId, &signedKey);
+		builder = builder.signature(self.signature.as_slice());
+		builder = builder.registration_id(self.regId);
+		builder = builder.identity_key(&idKey);
+		return builder.build().unwrap();
+	}
+}
 
 fn parseIdData(idData:RawIdData, ctx:&Context) -> (keys::IdentityKeyPair, u32){
 
