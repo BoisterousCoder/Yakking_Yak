@@ -21,6 +21,7 @@ mod encrypter;
 mod store;
 mod serverhandlers;
 
+
 fn main() {
 	::std::env::set_var("RUST_LOG", "actix_web=info");
 	env_logger::init();
@@ -43,7 +44,6 @@ fn main() {
 			group: "bob".to_string(),
 			password: "bob".to_string()
 		};
-		let aliceStore = encrypter::getCryptStore(aliceConnData.clone());
 		println!("Connecting to {}...", aliceConnData.get_ip());
 		let (response, framed) = Client::new()
 			.ws(aliceConnData.get_ip())
@@ -58,7 +58,9 @@ fn main() {
 		let (sink, stream) = framed.split();
 		let addr = ChatClient::create(|ctx| {
 			ChatClient::add_stream(stream, ctx);
-			ChatClient(SinkWrite::new(sink, ctx))
+			let aliceCrypto = encrypter::Crypto::new("alice".to_string(), aliceConnData.clone());
+			let bobCrypto = encrypter::Crypto::new("bob".to_string(), bobConnData.clone());
+			ChatClient(SinkWrite::new(sink, ctx), aliceCrypto, bobCrypto)
 		});
 
 		// start console loop
@@ -68,6 +70,7 @@ fn main() {
 				println!("error");
 				return;
 			}
+			//let msg = utils::ServerMSG::new("Alice".to_string(), "test".to_string(), cmd);
 			let msg = utils::ServerMSG::new("Alice".to_string(), "test".to_string(), cmd);
 			addr.do_send(ClientCommand(msg.toString()));
 		});
@@ -75,7 +78,7 @@ fn main() {
 	sys.run().unwrap();
 }
 
-struct ChatClient(SinkWrite<Message, SplitSink<Framed<BoxedSocket, Codec>, Message>>);
+struct ChatClient(SinkWrite<Message, SplitSink<Framed<BoxedSocket, Codec>, Message>>, encrypter::Crypto, encrypter::Crypto);
 
 #[derive(Message)]
 #[rtype(result = "()")]
@@ -86,8 +89,12 @@ impl Actor for ChatClient {
 	type Context = Context<Self>;
 
 	fn started(&mut self, ctx: &mut Context<Self>) {
+		//let reg = format!("{}", self.1.registration_id().unwrap());
+		//let msg = utils::ServerMSG::new("Alice".to_string(), "addr".to_string(), reg);
+		//self.0.write(Message::Text(msg.toString())).unwrap();
+
 		// start heartbeats otherwise server will disconnect after 10 seconds
-		self.hb(ctx)
+		self.hb(ctx);
 	}
 
 	fn stopped(&mut self, _: &mut Context<Self>) {
@@ -124,7 +131,7 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for ChatClient {
 	fn handle(&mut self, msg: Result<Frame, WsProtocolError>, _: &mut Context<Self>) {
 		if let Ok(Frame::Text(txt)) = msg {
 			let msg = utils::ServerMSG::fromServer(&txt.to_vec());
-			serverhandlers::onServerMSG(msg);
+			serverhandlers::onServerMSG(msg, &mut self.1);
 		}
 	}
 
