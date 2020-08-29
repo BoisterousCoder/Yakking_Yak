@@ -8,12 +8,15 @@ use crate::store::{attemptFetchIdData, storeID, RawIdData};
 
 
 const EXTENDED_RANGE:i32 = 0;
+const DEVICE_ID:i32 = 12345;
 
 pub struct Crypto{
 	pub name: String,
 	connData: ConnectionData,
 	ctx:Context,
-	store:StoreContext
+	//idKeyStore:IdentityKeyStore,
+	store:StoreContext,
+	bundles: Vec<KeyBundleWrapper>
 }
 impl Crypto{
 	pub fn new(name:String, connData:ConnectionData) -> Crypto{
@@ -57,14 +60,15 @@ impl Crypto{
 		//put it all together
 		let store = libsignal_protocol::store_context(&ctx, preKeyStore, signedKeyStore, sessionStore, idKeyStore).unwrap();
 
-		//Make Bundle
-
+		
 
 		return Crypto{
 			name:name,
 			ctx:ctx,
 			store:store,
-			connData: connData
+			//idKeyStore:idKeyStore,
+			connData: connData,
+			bundles: Vec::new()
 		}
 	}
 }
@@ -102,6 +106,35 @@ impl KeyBundleWrapper{
 		builder = builder.registration_id(self.regId);
 		builder = builder.identity_key(&idKey);
 		return builder.build().unwrap();
+	}
+	pub fn toString(&self) -> String{
+		let preKeyStr = base64::encode(&self.pre);
+		let signedStr = base64::encode(&self.signed);
+		let signatureStr = base64::encode(&self.signature);
+		let idStr = base64::encode(&self.id);
+		return format!("*{}*{}*{}*{}*{}*{}*{}*{}*", 
+			self.preId, 
+			self.signedId,
+			self.regId,
+			self.deviceId,
+			preKeyStr,
+			signedStr,
+			signatureStr,
+			idStr
+		)
+	}
+	pub fn fromString(input:String) -> KeyBundleWrapper{
+		let segments: Vec<&str> = input.split('*').filter(|seg| !seg.is_empty()).collect();
+		return KeyBundleWrapper{
+			preId: segments[0].parse::<u32>().unwrap(),
+			signedId: segments[1].parse::<u32>().unwrap(),
+			regId: segments[2].parse::<u32>().unwrap(),
+			deviceId: segments[3].parse::<i32>().unwrap(),
+			signed: base64::decode(segments[4]).unwrap(),
+			pre: base64::decode(segments[5]).unwrap(),
+			signature: base64::decode(segments[6]).unwrap(),
+			id: base64::decode(segments[7]).unwrap()
+		}
 	}
 }
 
