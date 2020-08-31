@@ -15,6 +15,7 @@ dependencies = [
  "bytes",
  "env_logger",
  "futures",
+ "lazy_static",
  "libsignal-protocol",
  "magic-crypt",
  "serde",

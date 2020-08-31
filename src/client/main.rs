@@ -70,8 +70,7 @@ fn main() {
 				println!("error");
 				return;
 			}
-			//let msg = utils::ServerMSG::new("Alice".to_string(), "test".to_string(), cmd);
-			//let msg = utils::ServerMsg::new(&aliceCrypto.addr(), utils::MsgContent::InsecureText(&cmd));
+
 			addr.do_send(ClientCommand(cmd));
 		});
 	});
@@ -89,10 +88,6 @@ impl Actor for ChatClient {
 	type Context = Context<Self>;
 
 	fn started(&mut self, ctx: &mut Context<Self>) {
-		//let reg = format!("{}", self.1.registration_id().unwrap());
-		//let msg = utils::ServerMSG::new("Alice".to_string(), "addr".to_string(), reg);
-		//self.0.write(Message::Text(msg.toString())).unwrap();
-
 		// start heartbeats otherwise server will disconnect after 10 seconds
 		self.hb(ctx);
 		serverhandlers::onStart(&mut self.0, &mut self.1);

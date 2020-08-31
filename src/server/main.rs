@@ -1,12 +1,11 @@
 //server
 #![allow(non_snake_case)]
 
-//! Simple echo websocket server.
-//! Open `http://localhost:8080/ws/index.html` in browser
-//! or [python console client](https://github.com/actix/examples/blob/master/websocket/websocket-client.py)
-//! could be used for testing.
+#[macro_use] extern crate lazy_static;
 
 use std::time::{Duration, Instant};
+use std::sync::Mutex;
+use std::collections::{HashMap, HashSet};
 
 use actix::prelude::*;
 use actix_files as fs;
@@ -17,6 +16,10 @@ use actix_web_actors::ws;
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 /// How long before lack of client response causes a timeout
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
+
+lazy_static!{
+	static ref chatState: Mutex<HashMap<String, HashSet<Addr<MyWebSocket>>>> = Mutex::new(HashMap::new());
+}
 
 /// do websocket handshake and start `MyWebSocket` actor
 async fn ws_index(r: HttpRequest, stream: web::Payload) -> Result<HttpResponse, Error> {
@@ -43,6 +46,18 @@ impl Actor for MyWebSocket {
 	}
 }
 
+#[derive(Message)]
+#[rtype(result = "()")]
+struct EchoedMsg(String);
+
+impl Handler<EchoedMsg> for MyWebSocket{
+	type Result = ();
+
+	fn handle(&mut self, msg: EchoedMsg, ctx: &mut ws::WebsocketContext<Self>) {
+		ctx.text(msg.0);
+	}
+}
+
 /// Handler for `ws::Message`
 impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for MyWebSocket {
 	fn handle(
@@ -62,11 +77,34 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for MyWebSocket {
 			Ok(ws::Message::Text(text)) => {
 				if !text.is_empty(){
 					println!("WS: {}", text);
+					let segments: Vec<&str> = text.split('*').filter(|seg| !seg.is_empty()).collect();
+					if segments[1]=="j" {
+						chatState.lock().unwrap().entry(String::from(segments[2])).or_insert(HashSet::new()).insert(ctx.address());
+					}else{
+						for (_, members) in chatState.lock().unwrap().clone().iter(){
+							if members.get(&ctx.address()) != None {
+								for member in members.iter(){
+									member.do_send(EchoedMsg(text.clone()));
+								}
+								break;
+							}
+						}
+					}
+					ctx.text(text)
 				}
-				ctx.text(text)
 			},
 			Ok(ws::Message::Binary(bin)) => ctx.binary(bin),
 			Ok(ws::Message::Close(reason)) => {
+				for (group, members) in chatState.lock().unwrap().clone().iter(){
+					if members.get(&ctx.address()) != None {
+						if members.len() > 1 {
+							chatState.lock().unwrap().get_mut(group).unwrap().remove(&ctx.address());
+						}else{
+							chatState.lock().unwrap().remove(group);
+						}
+						break;
+					}
+				}
 				ctx.close(reason);
 				ctx.stop();
 			}

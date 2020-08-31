@@ -7,6 +7,7 @@ use awc::ws::Message;
 const FILE_EXT:&str = "keys";
 const BUNDLE_LABEL:&str = "b";
 const INSECURE_LABEL:&str = "i";
+const JOIN_LABEL:&str = "j";
 const BLANK_LABEL:&str = "_";
 
 pub fn getUserIn(prompt:String) -> String{
@@ -38,6 +39,7 @@ impl ConnectionData{
 pub enum MsgContent{
     Bundle(KeyBundleWrapper),
     InsecureText(String),
+    JoinGroup(String),
     Blank()
 }
 
@@ -63,6 +65,7 @@ impl ServerMsg{
         let content = match segments[1] {
             BUNDLE_LABEL => MsgContent::Bundle(KeyBundleWrapper::fromString(contentData)),
             INSECURE_LABEL => MsgContent::InsecureText(contentData),
+            JOIN_LABEL => MsgContent::JoinGroup(contentData),
             BLANK_LABEL => MsgContent::Blank(),
             &_ => MsgContent::Blank()
         };
@@ -76,6 +79,7 @@ impl ServerMsg{
         let (kind, body) = match self.content {
             MsgContent::Bundle(bundle) => (BUNDLE_LABEL, bundle.toString()),
             MsgContent::InsecureText(txt) => (INSECURE_LABEL, txt),
+            MsgContent::JoinGroup(group) => (JOIN_LABEL, group),
             MsgContent::Blank() => (BLANK_LABEL, String::from("_"))
         };
         return format!("*{}*{}*{}*", addrData, kind, base64::encode(body.as_bytes()))
@@ -84,9 +88,10 @@ impl ServerMsg{
         let content = match self.content {
             MsgContent::Bundle(_) => format!("{}* is requesting to be trusted", BUNDLE_LABEL),
             MsgContent::InsecureText(txt) => format!("{}* {}", INSECURE_LABEL, txt),
+            MsgContent::JoinGroup(_) => format!("{}* joined the group", JOIN_LABEL),
             MsgContent::Blank() => format!("{}* Error Parsing Text", BLANK_LABEL)
         };
-        println!("*{}\\{}", self.from.as_str().unwrap(), content);
+        println!("*{}\\{}", self.from.as_str().unwrap(), content.replace("\r", "").replace("\n", ""));
     }
     pub fn toWritable(self) -> Message {
         Message::Text(self.toString())
