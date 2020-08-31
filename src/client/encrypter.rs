@@ -1,5 +1,5 @@
 use libsignal_protocol;
-use libsignal_protocol::{Context, keys, StoreContext, Serializable, PreKeyBundle};
+use libsignal_protocol::{Address,Context, keys, StoreContext, Serializable, PreKeyBundle};
 use libsignal_protocol::stores::*;
 use std::time::SystemTime;
 use base64;
@@ -11,11 +11,12 @@ const EXTENDED_RANGE:i32 = 0;
 const DEVICE_ID:i32 = 12345;
 
 pub struct Crypto{
-	pub name: String,
-	connData: ConnectionData,
+	name: String,
+	pub connData: ConnectionData,
 	ctx:Context,
-	//idKeyStore:IdentityKeyStore,
 	store:StoreContext,
+	idKeySet: keys::IdentityKeyPair,
+	deviceId: i32,
 	bundles: Vec<KeyBundleWrapper>
 }
 impl Crypto{
@@ -35,7 +36,7 @@ impl Crypto{
 
 		let preKeys = libsignal_protocol::generate_pre_keys(&ctx, start, count).unwrap().collect::<Vec<keys::PreKey>>();
 		
-		let mut preKeyStore = InMemoryPreKeyStore::default();
+		let preKeyStore = InMemoryPreKeyStore::default();
 		let mut preKeyIter = preKeys.iter();
 		loop {
 			match preKeyIter.next() {
@@ -58,20 +59,32 @@ impl Crypto{
 		let sessionStore = InMemorySessionStore::default();
 
 		//put it all together
-		let store = libsignal_protocol::store_context(&ctx, preKeyStore, signedKeyStore, sessionStore, idKeyStore).unwrap();
-
+		let store:StoreContext = libsignal_protocol::store_context(&ctx, preKeyStore, signedKeyStore, sessionStore, idKeyStore).unwrap();
 		
 
 		return Crypto{
 			name:name,
 			ctx:ctx,
 			store:store,
-			//idKeyStore:idKeyStore,
+			idKeySet:idKeySet,
 			connData: connData,
-			bundles: Vec::new()
+			bundles: Vec::new(),
+			deviceId: DEVICE_ID
 		}
 	}
+	pub fn getBundle(&mut self) -> KeyBundleWrapper{
+		let preKey = &libsignal_protocol::generate_pre_keys(&self.ctx, 12, 1).unwrap().collect::<Vec<keys::PreKey>>()[0];
+		let signedKey = libsignal_protocol::generate_signed_pre_key(&self.ctx, &self.idKeySet, 5, SystemTime::now(),).unwrap();
+		//self.store.store_pre_key(preKey);
+		//self.store.store_signed_pre_key(signedKey);
+		return KeyBundleWrapper::wrap(&self.store.registration_id().unwrap(), &self.deviceId, &preKey, &signedKey, &self.idKeySet)
+	}
+	pub fn addr(&self) -> Address{
+		Address::new(&self.name, self.deviceId)
+	}
 }
+
+#[derive(Clone, Debug)]
 pub struct KeyBundleWrapper{
 	preId: u32,
 	pre: Vec<u8>,
@@ -83,12 +96,12 @@ pub struct KeyBundleWrapper{
 	id: Vec<u8>
 }
 impl KeyBundleWrapper{
-	pub fn wrap(regId:u32, deviceId:i32, prekey:keys::PreKey, signedKey:keys::SessionSignedPreKey, idKey:keys::IdentityKeyPair) -> KeyBundleWrapper{
+	pub fn wrap(regId:&u32, deviceId:&i32, prekey:&keys::PreKey, signedKey:&keys::SessionSignedPreKey, idKey:&keys::IdentityKeyPair) -> KeyBundleWrapper{
 		return KeyBundleWrapper{
 			preId: prekey.id(),
 			signedId: signedKey.id(),
-			regId:regId,
-			deviceId:deviceId,
+			regId:regId.clone(),
+			deviceId:deviceId.clone(),
 			pre: prekey.key_pair().public().serialize().unwrap().as_slice().to_vec(),
 			signed: signedKey.key_pair().public().serialize().unwrap().as_slice().to_vec(),
 			id: idKey.public().serialize().unwrap().as_slice().to_vec(),
@@ -112,7 +125,7 @@ impl KeyBundleWrapper{
 		let signedStr = base64::encode(&self.signed);
 		let signatureStr = base64::encode(&self.signature);
 		let idStr = base64::encode(&self.id);
-		return format!("*{}*{}*{}*{}*{}*{}*{}*{}*", 
+		return format!("{}&{}&{}&{}&{}&{}&{}&{}", 
 			self.preId, 
 			self.signedId,
 			self.regId,
@@ -124,7 +137,7 @@ impl KeyBundleWrapper{
 		)
 	}
 	pub fn fromString(input:String) -> KeyBundleWrapper{
-		let segments: Vec<&str> = input.split('*').filter(|seg| !seg.is_empty()).collect();
+		let segments: Vec<&str> = input.split('&').filter(|seg| !seg.is_empty()).collect();
 		return KeyBundleWrapper{
 			preId: segments[0].parse::<u32>().unwrap(),
 			signedId: segments[1].parse::<u32>().unwrap(),

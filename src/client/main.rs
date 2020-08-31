@@ -55,11 +55,14 @@ fn main() {
 			.unwrap();
 
 		println!("{:?}", response);
+
+		let aliceCrypto = encrypter::Crypto::new("alice".to_string(), aliceConnData.clone());
+		let aliceAddrData = aliceCrypto.addr();
+		let bobCrypto = encrypter::Crypto::new("bob".to_string(), bobConnData.clone());
+
 		let (sink, stream) = framed.split();
 		let addr = ChatClient::create(|ctx| {
 			ChatClient::add_stream(stream, ctx);
-			let aliceCrypto = encrypter::Crypto::new("alice".to_string(), aliceConnData.clone());
-			let bobCrypto = encrypter::Crypto::new("bob".to_string(), bobConnData.clone());
 			ChatClient(SinkWrite::new(sink, ctx), aliceCrypto, bobCrypto)
 		});
 
@@ -71,8 +74,8 @@ fn main() {
 				return;
 			}
 			//let msg = utils::ServerMSG::new("Alice".to_string(), "test".to_string(), cmd);
-			let msg = utils::ServerMSG::new("Alice".to_string(), "test".to_string(), cmd);
-			addr.do_send(ClientCommand(msg.toString()));
+			//let msg = utils::ServerMsg::new(&aliceCrypto.addr(), utils::MsgContent::InsecureText(&cmd));
+			//addr.do_send(ClientCommand(msg.toString()));
 		});
 	});
 	sys.run().unwrap();
@@ -95,6 +98,8 @@ impl Actor for ChatClient {
 
 		// start heartbeats otherwise server will disconnect after 10 seconds
 		self.hb(ctx);
+		serverhandlers::onStart(&mut self.0, &mut self.1);
+		serverhandlers::onStart(&mut self.0, &mut self.2);
 	}
 
 	fn stopped(&mut self, _: &mut Context<Self>) {
@@ -130,7 +135,7 @@ impl Handler<ClientCommand> for ChatClient {
 impl StreamHandler<Result<Frame, WsProtocolError>> for ChatClient {
 	fn handle(&mut self, msg: Result<Frame, WsProtocolError>, _: &mut Context<Self>) {
 		if let Ok(Frame::Text(txt)) = msg {
-			let msg = utils::ServerMSG::fromServer(&txt.to_vec());
+			let msg = utils::ServerMsg::fromServer(&txt.to_vec());
 			serverhandlers::onServerMSG(msg, &mut self.1);
 		}
 	}
