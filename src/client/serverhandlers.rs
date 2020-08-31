@@ -10,7 +10,7 @@ use futures::stream::SplitSink;
 
 pub fn onStart(websocket:&mut SinkWrite<Message, SplitSink<Framed<BoxedSocket, Codec>, Message>>, state:&mut Crypto){
     websocket.write(ServerMsg::new(&state.addr(), MsgContent::JoinGroup(state.connData.group.clone())).toWritable());
-    //websocket.write(ServerMsg::new(&state.addr(), MsgContent::Bundle(state.getBundle())).toWritable());
+    websocket.write(ServerMsg::new(&state.addr(), MsgContent::Bundle(state.getBundle())).toWritable());
 }
 
 pub fn onServerMSG(msg: ServerMsg, state:&mut Crypto){
