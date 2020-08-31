@@ -42,7 +42,7 @@ fn isStoreExisting(file:String) -> bool{
     return fs::metadata(file).is_ok();
 }
 fn write(connData:ConnectionData, text:String){
-    let mut file = File::create(connData.group+".keys").unwrap();
+    let mut file = File::create(connData.get_fileName()).unwrap();
     let key = new_magic_crypt!(connData.password, 256);
     let data = key.encrypt_str_to_base64(text);
     
@@ -50,7 +50,7 @@ fn write(connData:ConnectionData, text:String){
     file.sync_all();
 }
 fn read(connData:ConnectionData) -> String{
-    let mut file = File::open(connData.group+".keys").unwrap();
+    let mut file = File::open(connData.get_fileName()).unwrap();
     let mut data = String::new();
     file.read_to_string(&mut data);
     let key = new_magic_crypt!(connData.password, 256);

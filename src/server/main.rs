@@ -51,7 +51,6 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for MyWebSocket {
 		ctx: &mut Self::Context,
 	) {
 		// process websocket messages
-		println!("WS: {:?}", msg);
 		match msg {
 			Ok(ws::Message::Ping(msg)) => {
 				self.hb = Instant::now();
@@ -60,7 +59,12 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for MyWebSocket {
 			Ok(ws::Message::Pong(_)) => {
 				self.hb = Instant::now();
 			}
-			Ok(ws::Message::Text(text)) => ctx.text(text),
+			Ok(ws::Message::Text(text)) => {
+				if !text.is_empty(){
+					println!("WS: {}", text);
+				}
+				ctx.text(text)
+			},
 			Ok(ws::Message::Binary(bin)) => ctx.binary(bin),
 			Ok(ws::Message::Close(reason)) => {
 				ctx.close(reason);

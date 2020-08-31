@@ -34,19 +34,18 @@ fn main() {
 		// 	group: utils::getUserIn("Group:".to_string()),
 		// 	password: utils::getUserIn("Please enter your password".to_string())
 		// };
-		let aliceConnData = utils::ConnectionData{
+
+		//this is for speed of debugging only. Replace with comment above when done
+		let connData = utils::ConnectionData{
 			server: "localhost:4000".to_string(),
-			group: "alice".to_string(),
-			password: "alice".to_string()
+			name: utils::getUserIn(String::from("Name:")),
+			group: utils::getUserIn("Group:".to_string()),
+			password: "test".to_string()
 		};
-		let bobConnData = utils::ConnectionData{
-			server: "localhost:4000".to_string(),
-			group: "bob".to_string(),
-			password: "bob".to_string()
-		};
-		println!("Connecting to {}...", aliceConnData.get_ip());
+
+		println!("Connecting to {}...", connData.get_ip());
 		let (response, framed) = Client::new()
-			.ws(aliceConnData.get_ip())
+			.ws(connData.get_ip())
 			.connect()
 			.await
 			.map_err(|e| {
@@ -56,14 +55,12 @@ fn main() {
 
 		println!("{:?}", response);
 
-		let aliceCrypto = encrypter::Crypto::new("alice".to_string(), aliceConnData.clone());
-		let aliceAddrData = aliceCrypto.addr();
-		let bobCrypto = encrypter::Crypto::new("bob".to_string(), bobConnData.clone());
+		let crypto = encrypter::Crypto::new(connData.clone());
 
 		let (sink, stream) = framed.split();
 		let addr = ChatClient::create(|ctx| {
 			ChatClient::add_stream(stream, ctx);
-			ChatClient(SinkWrite::new(sink, ctx), aliceCrypto, bobCrypto)
+			ChatClient(SinkWrite::new(sink, ctx), crypto)
 		});
 
 		// start console loop
@@ -75,13 +72,13 @@ fn main() {
 			}
 			//let msg = utils::ServerMSG::new("Alice".to_string(), "test".to_string(), cmd);
 			//let msg = utils::ServerMsg::new(&aliceCrypto.addr(), utils::MsgContent::InsecureText(&cmd));
-			//addr.do_send(ClientCommand(msg.toString()));
+			addr.do_send(ClientCommand(cmd));
 		});
 	});
 	sys.run().unwrap();
 }
 
-struct ChatClient(SinkWrite<Message, SplitSink<Framed<BoxedSocket, Codec>, Message>>, encrypter::Crypto, encrypter::Crypto);
+struct ChatClient(SinkWrite<Message, SplitSink<Framed<BoxedSocket, Codec>, Message>>, encrypter::Crypto);
 
 #[derive(Message)]
 #[rtype(result = "()")]
@@ -99,7 +96,6 @@ impl Actor for ChatClient {
 		// start heartbeats otherwise server will disconnect after 10 seconds
 		self.hb(ctx);
 		serverhandlers::onStart(&mut self.0, &mut self.1);
-		serverhandlers::onStart(&mut self.0, &mut self.2);
 	}
 
 	fn stopped(&mut self, _: &mut Context<Self>) {
@@ -126,8 +122,9 @@ impl ChatClient {
 impl Handler<ClientCommand> for ChatClient {
 	type Result = ();
 
-	fn handle(&mut self, msg: ClientCommand, _ctx: &mut Context<Self>) {
-		self.0.write(Message::Text(msg.0)).unwrap();
+	fn handle(&mut self, cmd: ClientCommand, _ctx: &mut Context<Self>) {
+		let msg = utils::ServerMsg::new(&self.1.addr(), utils::MsgContent::InsecureText(cmd.0));
+		self.0.write(Message::Text(msg.toString())).unwrap();
 	}
 }
 
@@ -136,7 +133,7 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for ChatClient {
 	fn handle(&mut self, msg: Result<Frame, WsProtocolError>, _: &mut Context<Self>) {
 		if let Ok(Frame::Text(txt)) = msg {
 			let msg = utils::ServerMsg::fromServer(&txt.to_vec());
-			serverhandlers::onServerMSG(msg, &mut self.1);
+			serverhandlers::onServerMSG(msg.clone(), &mut self.1);
 		}
 	}
 

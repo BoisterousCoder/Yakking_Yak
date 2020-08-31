@@ -13,14 +13,14 @@ pub fn onStart(websocket:&mut SinkWrite<Message, SplitSink<Framed<BoxedSocket, C
 }
 
 pub fn onServerMSG(msg: ServerMsg, state:&mut Crypto){
-    msg.display();
-    let optionBundle = "bundle".to_string();
-    let optionEncrypetedMsg = "encryptedMsg".to_string();
-    // if msg.from != state.addr() {
-    //     match msg.kind {
-    //         optionBundle => {
-
-    //         } 
-    //     }
-    // }
+    if msg.from != state.addr() {
+        msg.clone().display();
+        match msg.content {
+            MsgContent::Bundle(bundle) =>{
+                
+            },
+            MsgContent::InsecureText(_) =>{},
+            MsgContent::Blank() => {}
+        }
+    }
 }

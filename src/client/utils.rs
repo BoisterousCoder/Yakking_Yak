@@ -4,7 +4,7 @@ use libsignal_protocol::Address;
 use crate::encrypter::KeyBundleWrapper;
 use awc::ws::Message;
 
-const FILE_EXT:&str = ".keys";
+const FILE_EXT:&str = "keys";
 const BUNDLE_LABEL:&str = "b";
 const INSECURE_LABEL:&str = "i";
 const BLANK_LABEL:&str = "_";
@@ -19,6 +19,7 @@ pub fn getUserIn(prompt:String) -> String{
 pub struct ConnectionData{
     pub server:String,
     pub group:String,
+    pub name:String,
     pub password:String
 }
 impl ConnectionData{
@@ -29,7 +30,7 @@ impl ConnectionData{
         return format!("{}:{}", self.server.split(":").next().unwrap(), self.group);
     }
     pub fn get_fileName(&self) -> String {
-        return self.get_storeName() + FILE_EXT;
+        return format!("{}@{}.{}", self.name, self.get_storeName(), FILE_EXT);
     }
 }
 
@@ -40,6 +41,8 @@ pub enum MsgContent{
     Blank()
 }
 
+
+#[derive(Clone, Debug)]
 pub struct ServerMsg{
     pub from:Address,
     pub content:MsgContent
@@ -56,7 +59,7 @@ impl ServerMsg{
         let segments: Vec<&str> = txt.split('*').filter(|seg| !seg.is_empty()).collect();
         let addrSegments: Vec<&str> = segments[0].split('&').filter(|seg| !seg.is_empty()).collect();
         let nameData = base64::decode(addrSegments[0]).unwrap();
-        let contentData = str::from_utf8(base64::decode(addrSegments[2]).unwrap().as_slice()).unwrap().to_string();
+        let contentData = str::from_utf8(base64::decode(segments[2]).unwrap().as_slice()).unwrap().to_string();
         let content = match segments[1] {
             BUNDLE_LABEL => MsgContent::Bundle(KeyBundleWrapper::fromString(contentData)),
             INSECURE_LABEL => MsgContent::InsecureText(contentData),
@@ -81,7 +84,7 @@ impl ServerMsg{
         let content = match self.content {
             MsgContent::Bundle(_) => format!("{}* is requesting to be trusted", BUNDLE_LABEL),
             MsgContent::InsecureText(txt) => format!("{}* {}", INSECURE_LABEL, txt),
-            MsgContent::Blank() => format!("{}", BLANK_LABEL)
+            MsgContent::Blank() => format!("{}* Error Parsing Text", BLANK_LABEL)
         };
         println!("*{}\\{}", self.from.as_str().unwrap(), content);
     }

@@ -11,16 +11,14 @@ const EXTENDED_RANGE:i32 = 0;
 const DEVICE_ID:i32 = 12345;
 
 pub struct Crypto{
-	name: String,
 	pub connData: ConnectionData,
 	ctx:Context,
 	store:StoreContext,
 	idKeySet: keys::IdentityKeyPair,
-	deviceId: i32,
-	bundles: Vec<KeyBundleWrapper>
+	deviceId: i32
 }
 impl Crypto{
-	pub fn new(name:String, connData:ConnectionData) -> Crypto{
+	pub fn new(connData:ConnectionData) -> Crypto{
 		let ctx = Context::default();
 
 		//Setup Identifier Store
@@ -63,12 +61,10 @@ impl Crypto{
 		
 
 		return Crypto{
-			name:name,
 			ctx:ctx,
 			store:store,
 			idKeySet:idKeySet,
 			connData: connData,
-			bundles: Vec::new(),
 			deviceId: DEVICE_ID
 		}
 	}
@@ -80,7 +76,7 @@ impl Crypto{
 		return KeyBundleWrapper::wrap(&self.store.registration_id().unwrap(), &self.deviceId, &preKey, &signedKey, &self.idKeySet)
 	}
 	pub fn addr(&self) -> Address{
-		Address::new(&self.name, self.deviceId)
+		Address::new(&self.connData.name, self.deviceId)
 	}
 }
 
