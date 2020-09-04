@@ -1,14 +1,6 @@
 use std::{io, str};
-use base64;
-use libsignal_protocol::Address;
-use crate::encrypter::KeyBundleWrapper;
-use awc::ws::Message;
 
 const FILE_EXT:&str = "keys";
-const BUNDLE_LABEL:&str = "b";
-const INSECURE_LABEL:&str = "i";
-const JOIN_LABEL:&str = "j";
-const BLANK_LABEL:&str = "_";
 
 pub fn getUserIn(prompt:String) -> String{
     let mut line = String::new();
@@ -34,68 +26,3 @@ impl ConnectionData{
         return format!("{}@{}.{}", self.name, self.get_storeName(), FILE_EXT);
     }
 }
-
-#[derive(Clone, Debug)]
-pub enum MsgContent{
-    Bundle(KeyBundleWrapper),
-    InsecureText(String),
-    JoinGroup(String),
-    Blank()
-}
-
-
-#[derive(Clone, Debug)]
-pub struct ServerMsg{
-    pub from:Address,
-    pub content:MsgContent
-}
-impl ServerMsg{
-    pub fn new(from:&Address, content:MsgContent) -> ServerMsg{
-        return ServerMsg{
-            from: from.clone(),
-            content: content
-        }
-    }
-    pub fn fromServer(data:&Vec<u8>) -> ServerMsg{
-        let txt = str::from_utf8(data).unwrap();
-        let segments: Vec<&str> = txt.split('*').filter(|seg| !seg.is_empty()).collect();
-        let addrSegments: Vec<&str> = segments[0].split('&').filter(|seg| !seg.is_empty()).collect();
-        let nameData = base64::decode(addrSegments[0]).unwrap();
-        let contentData = str::from_utf8(base64::decode(segments[2]).unwrap().as_slice()).unwrap().to_string();
-        let content = match segments[1] {
-            BUNDLE_LABEL => MsgContent::Bundle(KeyBundleWrapper::fromString(contentData)),
-            INSECURE_LABEL => MsgContent::InsecureText(contentData),
-            JOIN_LABEL => MsgContent::JoinGroup(contentData),
-            BLANK_LABEL => MsgContent::Blank(),
-            &_ => MsgContent::Blank()
-        };
-        return ServerMsg{
-            from: Address::new(nameData, addrSegments[1].parse().unwrap()), 
-            content: content
-        }
-    }
-    pub fn toString(self) -> String{
-        let addrData = format!("{}&{}", base64::encode(&self.from.bytes()), &self.from.device_id());
-        let (kind, body) = match self.content {
-            MsgContent::Bundle(bundle) => (BUNDLE_LABEL, bundle.toString()),
-            MsgContent::InsecureText(txt) => (INSECURE_LABEL, txt),
-            MsgContent::JoinGroup(group) => (JOIN_LABEL, group),
-            MsgContent::Blank() => (BLANK_LABEL, String::from("_"))
-        };
-        return format!("*{}*{}*{}*", addrData, kind, base64::encode(body.as_bytes()))
-    }
-    pub fn display(self){
-        let content = match self.content {
-            MsgContent::Bundle(_) => format!("{}* is requesting to be trusted", BUNDLE_LABEL),
-            MsgContent::InsecureText(txt) => format!("{}* {}", INSECURE_LABEL, txt),
-            MsgContent::JoinGroup(_) => format!("{}* joined the group", JOIN_LABEL),
-            MsgContent::Blank() => format!("{}* Error Parsing Text", BLANK_LABEL)
-        };
-        println!("*{}\\{}", self.from.as_str().unwrap(), content.replace("\r", "").replace("\n", ""));
-    }
-    pub fn toWritable(self) -> Message {
-        Message::Text(self.toString())
-    }
-}
-
-

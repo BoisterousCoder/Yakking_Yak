@@ -20,6 +20,7 @@ mod utils;
 mod encrypter;
 mod store;
 mod serverhandlers;
+mod cmdhandler;
 
 
 fn main() {
@@ -71,18 +72,13 @@ fn main() {
 				return;
 			}
 
-			addr.do_send(ClientCommand(cmd));
+			addr.do_send(cmdhandler::ClientCommand(cmd));
 		});
 	});
 	sys.run().unwrap();
 }
 
 struct ChatClient(SinkWrite<Message, SplitSink<Framed<BoxedSocket, Codec>, Message>>, encrypter::Crypto);
-
-#[derive(Message)]
-#[rtype(result = "()")]
-struct ClientCommand(String);
-
 
 impl Actor for ChatClient {
 	type Context = Context<Self>;
@@ -114,12 +110,17 @@ impl ChatClient {
 }
 
 /// Handle stdin commands
-impl Handler<ClientCommand> for ChatClient {
+impl Handler<cmdhandler::ClientCommand> for ChatClient {
 	type Result = ();
 
-	fn handle(&mut self, cmd: ClientCommand, _ctx: &mut Context<Self>) {
-		let msg = utils::ServerMsg::new(&self.1.addr(), utils::MsgContent::InsecureText(cmd.0));
-		self.0.write(Message::Text(msg.toString())).unwrap();
+	fn handle(&mut self, cmd: cmdhandler::ClientCommand, _ctx: &mut Context<Self>) {
+		match cmd.handleSelf(&mut self.1) {
+			Some(content) =>{
+				let msg = serverhandlers::ServerMsg::new(&self.1.addr(), content);
+				self.0.write(Message::Text(msg.toString())).unwrap();
+			}
+			None => {}
+		}
 	}
 }
 
@@ -127,8 +128,7 @@ impl Handler<ClientCommand> for ChatClient {
 impl StreamHandler<Result<Frame, WsProtocolError>> for ChatClient {
 	fn handle(&mut self, msg: Result<Frame, WsProtocolError>, _: &mut Context<Self>) {
 		if let Ok(Frame::Text(txt)) = msg {
-			let msg = utils::ServerMsg::fromServer(&txt.to_vec());
-			serverhandlers::onServerMSG(msg.clone(), &mut self.1);
+			serverhandlers::ServerMsg::fromServer(&txt.to_vec()).handleSelf(&mut self.1);
 		}
 	}
 

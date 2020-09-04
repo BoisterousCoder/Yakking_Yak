@@ -78,6 +78,10 @@ impl Crypto{
 	pub fn addr(&self) -> Address{
 		Address::new(&self.connData.name, self.deviceId)
 	}
+	pub fn trust(&mut self, name:String) -> Address{
+		let addr = Address::new(name, DEVICE_ID);
+		return addr;
+	}
 }
 
 #[derive(Clone, Debug)]
