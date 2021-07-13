@@ -33,7 +33,7 @@ fn main() {
 		// let senderConnData = utils::ConnectionData{
 		// 	server: utils::getUserIn("Server:".to_string()),
 		// 	group: utils::getUserIn("Group:".to_string()),
-		// 	password: utils::getUserIn("Please enter your password".to_string())
+		// 	password: utils::getUserIn("Password:".to_string())
 		// };
 
 		//this is for speed of debugging only. Replace with comment above when done
