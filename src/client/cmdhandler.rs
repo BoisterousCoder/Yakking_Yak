@@ -15,10 +15,10 @@ impl ClientCommand {
 				"/broadcast" => {
 					Some(MsgContent::InsecureText(words[1..].join(" ")))
 				}
-				"/trust" => {
-					let addr = crypto.trust(words[1..].join(" "));
-					Some(MsgContent::Trust(addr))
-				}
+				// "/trust" => {
+				// 	let addr = crypto.trust(words[1..].join(" "));
+				// 	Some(MsgContent::Trust(addr))
+				// }
 				_ => {
 					eprintln!("Command {} was not recognized.", cmd);
 					None

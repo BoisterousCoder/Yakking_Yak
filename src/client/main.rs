@@ -30,13 +30,6 @@ fn main() {
 	let sys = System::new("websocket-client");
 
 	Arbiter::spawn(async {
-		// let senderConnData = utils::ConnectionData{
-		// 	server: utils::getUserIn("Server:".to_string()),
-		// 	group: utils::getUserIn("Group:".to_string()),
-		// 	password: utils::getUserIn("Password:".to_string())
-		// };
-
-		//this is for speed of debugging only. Replace with comment above when done
 		let connData = utils::ConnectionData{
 			server: "localhost:4000".to_string(),
 			name: utils::getUserIn(String::from("Name:")),
