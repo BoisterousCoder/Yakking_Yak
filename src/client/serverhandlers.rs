@@ -7,12 +7,14 @@ use awc::{
 };
 use actix_codec::Framed;
 use futures::stream::SplitSink;
+use x25519_dalek::PublicKey;
 use base64;
 
 // const BUNDLE_LABEL:&str = "b";
 const INSECURE_LABEL:&str = "i";
 const JOIN_LABEL:&str = "j";
 const LEAVE_LABEL:&str = "l";
+const PUBLIC_KEY_LABEL:&str = "p";
 //const TRUST_LABEL:&str = "t";
 const BLANK_LABEL:&str = "_";
 
@@ -22,9 +24,9 @@ pub fn onStart(websocket:&mut SinkWrite<Message, SplitSink<Framed<BoxedSocket, C
 
 #[derive(Clone, Debug)]
 pub enum MsgContent{
-	//Bundle(KeyBundleWrapper),
 	InsecureText(String),
 	Join(String),
+	PublicKey(String),
 	Leave(String),
 	//Trust(Address),
 	Blank()
@@ -44,15 +46,15 @@ impl ServerMsg{
 	}
 	pub fn fromServer(data:&Vec<u8>) -> ServerMsg{
 		let txt = str::from_utf8(data).unwrap();
-		//println!("{}", txt); //Uncomment if you want to see raw data
+		println!("{}", txt); //Uncomment if you want to see raw data
 		let segments: Vec<&str> = txt.split('*').filter(|seg| !seg.is_empty()).collect();
 		let addrSegments: Vec<&str> = segments[0].split('@').filter(|seg| !seg.is_empty()).collect();
 		//let nameData = str::from_utf8(base64::decode(addrSegments[0]).unwrap().as_slice()).unwrap();
 		let contentData = decodeBase64(segments[2]);
 		let content = match segments[1] {
-			//BUNDLE_LABEL => MsgContent::Bundle(KeyBundleWrapper::fromString(contentData)),
 			INSECURE_LABEL => MsgContent::InsecureText(contentData),
 			JOIN_LABEL => MsgContent::Join(contentData),
+			PUBLIC_KEY_LABEL => MsgContent::PublicKey(contentData),
 			// TRUST_LABEL => {
 			// 	let addrData:Vec<&str> = contentData.split("&").collect();
 			// 	let name = base64::decode(addrData[0].to_string()).unwrap();
@@ -68,9 +70,8 @@ impl ServerMsg{
 		}
 	}
 	pub fn toString(self) -> String{
-		//let addrData = format!("{}&{}", base64::encode(&self.from.bytes()), &self.from.device_id());
-		let (kind, body) = match self.content {
-			//MsgContent::Bundle(bundle) => (BUNDLE_LABEL, bundle.toString()),
+		let (kind, body):(&str, String) = match self.content {
+			MsgContent::PublicKey(publicKey) => (PUBLIC_KEY_LABEL, publicKey),
 			MsgContent::InsecureText(txt) => (INSECURE_LABEL, txt),
 			MsgContent::Join(group) => (JOIN_LABEL, group),
 			MsgContent::Leave(group) => (LEAVE_LABEL, group),
@@ -80,8 +81,8 @@ impl ServerMsg{
 		return format!("*{}*{}*{}*", self.from.asSendable(), kind, base64::encode(body.as_bytes()))
 	}
 	pub fn display(self){
-		let content = match self.content {
-			//MsgContent::Bundle(_) => format!("{}* is requesting to be trusted", BUNDLE_LABEL),
+		let content:String = match self.content {
+			MsgContent::PublicKey(_) => format!("{}* sent their public", PUBLIC_KEY_LABEL),
 			MsgContent::InsecureText(txt) => format!("{}* {}", INSECURE_LABEL, txt),
 			MsgContent::Join(_) => format!("{}* went online", JOIN_LABEL),
 			MsgContent::Leave(_) => format!("{}* went offline", JOIN_LABEL),
