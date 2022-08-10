@@ -2,10 +2,17 @@
 //use base64;
 use crate::utils::{ConnectionData, decodeBase64, Address, splitAndClean};
 use rand_core::OsRng;
+use std::str;
 use x25519_dalek::{EphemeralSecret, PublicKey, SharedSecret};
+use aes_gcm::{
+    aead::{Aead, KeyInit},
+    Aes256Gcm, Nonce // Or `Aes128Gcm`
+};
+
 //use crate::store::{attemptFetchIdData, storeID, RawIdData};
 
 const DEVICE_ID:i32 = 12345;
+const NONCE_MSG:&str = "I like cheese cake";
 
 pub struct Crypto{
 	pub connData: ConnectionData,
@@ -65,7 +72,8 @@ impl Crypto{
 		for person in &self.otherPeople {
 			if(person.isTrusting()){
 				//TODO: Encrypt the text with the shared key
-				encryptedText += &format!("{}.{};", person.address.asSendable(), base64::encode(text.clone()));
+				let key = person.sharedSecret.as_ref().unwrap().as_bytes().clone();
+				encryptedText += &format!("{}.{};", person.address.asSendable(), crypt(&key, &text, true));
 			}
 		}
 		return encryptedText;
@@ -80,7 +88,8 @@ impl Crypto{
 					if(person.address.name == from.name){
 						if person.isTrusting(){
 							//TODO Actually decrypt the data here
-							return decodeBase64(addressedMsgSplit[1]);
+							let key = person.sharedSecret.as_ref().unwrap().as_bytes().clone();
+							return crypt(&key, addressedMsgSplit[1], false);
 						}
 						return "has sent a secure message but you cannot read it as you do not trust them".to_string();
 					}
@@ -88,6 +97,20 @@ impl Crypto{
 			}
 		}
 		"has sent a message secure but does not trust you".to_string()
+	}
+}
+
+fn crypt(key:&[u8; 32], data:&str, isEncrypting:bool) -> String{
+	let cipher = Aes256Gcm::new_from_slice(key).unwrap();
+	//let nonce = Nonce::from_slice(NONCE_MSG.as_bytes().as_ref());
+	let nonce = Nonce::from_slice(b"unique nonce");
+	let dataBytes = data.as_bytes().as_ref();
+	return if isEncrypting {
+		base64::encode(cipher.encrypt(nonce, dataBytes).unwrap())
+	}else{
+		let bytes = base64::decode(dataBytes).unwrap();
+		let resBytes = cipher.decrypt(nonce, bytes.as_ref()).unwrap();
+		str::from_utf8(&resBytes).unwrap().to_string()
 	}
 }
 

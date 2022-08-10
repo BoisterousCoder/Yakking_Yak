@@ -9,7 +9,6 @@ use awc::{
 };
 use actix_codec::Framed;
 use futures::stream::SplitSink;
-use x25519_dalek::PublicKey;
 use base64;
 
 const INSECURE_LABEL:&str = "i";
@@ -49,7 +48,7 @@ impl ServerMsg{
 	}
 	pub fn fromServer(data:&Vec<u8>) -> ServerMsg{
 		let txt = str::from_utf8(data).unwrap();
-		println!("{}", txt); //Uncomment if you want to see raw data
+		//println!("{}", txt); //Uncomment if you want to see raw data
 		let segments: Vec<&str> = splitAndClean(txt, '*');
 		let addrSegments: Vec<&str> = splitAndClean(segments[0], '@');
 		let contentData = decodeBase64(segments[2]);

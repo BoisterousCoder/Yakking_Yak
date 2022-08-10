@@ -31,3 +31,4 @@ base64 = "0.12.3"
 # x25519-dalek = "1.1"
 x25519-dalek = {path="x25519-dalek"}
 rand_core = "0.5"
+aes-gcm = "0.10.1"
