@@ -79,7 +79,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for MyWebSocket {
 					println!("WS: {}", text);
 					let segments: Vec<&str> = text.split('*').filter(|seg| !seg.is_empty()).collect();
 					if segments[1]=="j" {
-						let subSegments = segments[2].split('&').filter(|seg| !seg.is_empty()).collect();
+						let subSegments:Vec<&str> = segments[2].split('&').filter(|seg| !seg.is_empty()).collect();
 						chatState.lock().unwrap().entry(String::from(subSegments[0])).or_insert(HashSet::new()).insert(ctx.address());
 					}
 					for (_, members) in chatState.lock().unwrap().clone().iter(){

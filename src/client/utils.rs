@@ -1,4 +1,5 @@
 use std::{io, str};
+use base64;
 
 //const FILE_EXT:&str = "keys";
 
@@ -22,4 +23,27 @@ impl ConnectionData{
 	// pub fn get_fileName(&self) -> String {
 	// 	return format!("{}@{}.{}", self.name, self.get_storeName(), FILE_EXT);
 	// }
+}
+pub fn decodeBase64(inTxt:&str) -> String{
+	return str::from_utf8(base64::decode(inTxt).unwrap().as_slice()).unwrap().to_string()
+}
+#[derive(Clone, Debug)]
+pub struct Address{
+	pub name: String,
+	pub deviceId: i32
+}
+impl Address{
+	pub fn new(name:&str, deviceId:i32) -> Address{	
+		return Address{
+			name: name.to_string(),
+			deviceId: deviceId
+		}
+	}
+	pub fn asSendable(&self) -> String{
+		format!("{}@{}", base64::encode(self.name.clone()), self.deviceId)
+	}
+	pub fn fromSendable(s:String) -> Address{
+		let addrData:Vec<&str> = s.split('@').filter(|seg| !seg.is_empty()).collect();
+		Address::new(&decodeBase64(addrData[0]), addrData[1].parse().unwrap())
+	}
 }
