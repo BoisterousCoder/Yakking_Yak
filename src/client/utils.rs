@@ -43,7 +43,13 @@ impl Address{
 		format!("{}@{}", base64::encode(self.name.clone()), self.deviceId)
 	}
 	pub fn fromSendable(s:String) -> Address{
-		let addrData:Vec<&str> = s.split('@').filter(|seg| !seg.is_empty()).collect();
+		let addrData:Vec<&str> = splitAndClean(&s, '@');
 		Address::new(&decodeBase64(addrData[0]), addrData[1].parse().unwrap())
 	}
+}
+pub fn splitAndClean(text:&str, split:char) -> Vec<&str>{
+	text.split(split)
+		.map(|seg| seg.trim())//remove whitespace
+		.filter(|seg| !seg.is_empty())//remove empty segments
+		.collect()
 }

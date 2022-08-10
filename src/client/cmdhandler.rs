@@ -2,6 +2,7 @@
 use actix::*;
 use crate::serverhandlers::MsgContent;
 use crate::encrypter::Crypto;
+use crate::utils::splitAndClean;
 use base64;
 
 #[derive(Message)]
@@ -10,7 +11,7 @@ pub struct ClientCommand(pub String);
 impl ClientCommand {
 	pub fn handleSelf(self, state:&mut Crypto) -> Option<MsgContent>{
 		if self.0.chars().collect::<Vec<char>>()[0] == '/' {
-			let words:Vec<&str> = self.0.split(' ').filter(|word| !word.is_empty()).collect();
+			let words:Vec<&str> = splitAndClean(&self.0, ' ');
 			let cmd = words[0];
 			return match cmd{
 				"/share" => {

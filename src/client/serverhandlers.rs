@@ -1,5 +1,5 @@
 use crate::encrypter::Crypto;
-use crate::utils::{decodeBase64, Address};
+use crate::utils::{decodeBase64, Address, splitAndClean};
 use std::str;
 use actix::io::SinkWrite;
 use std::convert::TryInto;
@@ -50,8 +50,8 @@ impl ServerMsg{
 	pub fn fromServer(data:&Vec<u8>) -> ServerMsg{
 		let txt = str::from_utf8(data).unwrap();
 		println!("{}", txt); //Uncomment if you want to see raw data
-		let segments: Vec<&str> = txt.split('*').filter(|seg| !seg.is_empty()).collect();
-		let addrSegments: Vec<&str> = segments[0].split('@').filter(|seg| !seg.is_empty()).collect();
+		let segments: Vec<&str> = splitAndClean(txt, '*');
+		let addrSegments: Vec<&str> = splitAndClean(segments[0], '@');
 		let contentData = decodeBase64(segments[2]);
 		let name = decodeBase64(addrSegments[0]);
 		let deviceId = addrSegments[1].parse().unwrap();
