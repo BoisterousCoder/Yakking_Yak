@@ -40,7 +40,7 @@ impl ClientCommand {
 				}
 			}
 		}else{
-			if(state.isTrusting()){
+			if state.isTrusting() {
 				return Some(MsgContent::SecureText(state.encrypt(self.0)));
 			}else{
 				return Some(MsgContent::InsecureText(self.0));

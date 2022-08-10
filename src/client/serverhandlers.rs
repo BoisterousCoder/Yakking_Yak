@@ -20,7 +20,7 @@ const TRUST_LABEL:&str = "t";
 const BLANK_LABEL:&str = "_";
 
 pub fn onStart(websocket:&mut SinkWrite<Message, SplitSink<Framed<BoxedSocket, Codec>, Message>>, state:&mut Crypto){
-	websocket.write(ServerMsg::new(&state.addr(), MsgContent::Join(state.connData.group.clone())).toWritable());
+	websocket.write(ServerMsg::new(&state.addr(), MsgContent::Join(state.connData.group.clone())).toWritable()).unwrap();
 }
 
 #[derive(Clone, Debug)]

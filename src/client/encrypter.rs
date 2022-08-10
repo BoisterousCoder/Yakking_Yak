@@ -1,6 +1,6 @@
 //use std::time::SystemTime;
 //use base64;
-use crate::utils::{ConnectionData, decodeBase64, Address, splitAndClean};
+use crate::utils::{ConnectionData, Address, splitAndClean};
 use rand_core::OsRng;
 use std::str;
 use x25519_dalek::{EphemeralSecret, PublicKey, SharedSecret};
@@ -12,7 +12,7 @@ use aes_gcm::{
 //use crate::store::{attemptFetchIdData, storeID, RawIdData};
 
 const DEVICE_ID:i32 = 12345;
-const NONCE_MSG:&str = "I like cheese cake";
+//const NONCE_MSG:&str = "I like cheese cake";
 
 pub struct Crypto{
 	pub connData: ConnectionData,
@@ -70,7 +70,7 @@ impl Crypto{
 	pub fn encrypt(&self, text:String) -> String {
 		let mut encryptedText:String = "".to_string();
 		for person in &self.otherPeople {
-			if(person.isTrusting()){
+			if person.isTrusting() {
 				//TODO: Encrypt the text with the shared key
 				let key = person.sharedSecret.as_ref().unwrap().as_bytes().clone();
 				encryptedText += &format!("{}.{};", person.address.asSendable(), crypt(&key, &text, true));
@@ -83,9 +83,9 @@ impl Crypto{
 		for addressedMsg in addressedMsgs{
 			let addressedMsgSplit:Vec<&str> = splitAndClean(addressedMsg, '.');
 			let address = Address::fromSendable(addressedMsgSplit[0].to_string());
-			if(address.name == self.connData.name){
+			if address.name == self.connData.name {
 				for person in &self.otherPeople{
-					if(person.address.name == from.name){
+					if person.address.name == from.name {
 						if person.isTrusting(){
 							//TODO Actually decrypt the data here
 							let key = person.sharedSecret.as_ref().unwrap().as_bytes().clone();
