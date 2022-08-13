@@ -14,7 +14,7 @@ impl ClientCommand {
 			let words:Vec<&str> = splitAndClean(&self.0, ' ');
 			let cmd = words[0];
 			return match cmd{
-				"/share" => {
+				"/allowTrust" => {
 					Some(MsgContent::PublicKey(base64::encode(state.publicKey.as_bytes())))
 				}
 				"/broadcast" => {
