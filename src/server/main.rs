@@ -18,7 +18,7 @@ const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 
 lazy_static!{
-	static ref chatState: Mutex<HashMap<String, HashSet<Addr<MyWebSocket>>>> = Mutex::new(HashMap::new());
+	static ref CHAT_STATE: Mutex<HashMap<String, HashSet<Addr<MyWebSocket>>>> = Mutex::new(HashMap::new());
 }
 
 /// do websocket handshake and start `MyWebSocket` actor
@@ -80,9 +80,9 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for MyWebSocket {
 					let segments: Vec<&str> = text.split('*').filter(|seg| !seg.is_empty()).collect();
 					if segments[1]=="j" {
 						let subSegments:Vec<&str> = segments[2].split('&').filter(|seg| !seg.is_empty()).collect();
-						chatState.lock().unwrap().entry(String::from(subSegments[0])).or_insert(HashSet::new()).insert(ctx.address());
+						CHAT_STATE.lock().unwrap().entry(String::from(subSegments[0])).or_insert(HashSet::new()).insert(ctx.address());
 					}
-					for (_, members) in chatState.lock().unwrap().clone().iter(){
+					for (_, members) in CHAT_STATE.lock().unwrap().clone().iter(){
 						if members.get(&ctx.address()) != None {
 							for member in members.iter(){
 								member.do_send(EchoedMsg(text.clone()));
@@ -95,12 +95,12 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for MyWebSocket {
 			},
 			Ok(ws::Message::Binary(bin)) => ctx.binary(bin),
 			Ok(ws::Message::Close(reason)) => {
-				for (group, members) in chatState.lock().unwrap().clone().iter(){
+				for (group, members) in CHAT_STATE.lock().unwrap().clone().iter(){
 					if members.get(&ctx.address()) != None {
 						if members.len() > 1 {
-							chatState.lock().unwrap().get_mut(group).unwrap().remove(&ctx.address());
+							CHAT_STATE.lock().unwrap().get_mut(group).unwrap().remove(&ctx.address());
 						}else{
-							chatState.lock().unwrap().remove(group);
+							CHAT_STATE.lock().unwrap().remove(group);
 						}
 						break;
 					}

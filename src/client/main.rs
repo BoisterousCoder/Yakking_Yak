@@ -18,7 +18,6 @@ use futures::stream::{SplitSink, StreamExt};
 
 mod utils;
 mod encrypter;
-mod store;
 mod serverhandlers;
 mod cmdhandler;
 
