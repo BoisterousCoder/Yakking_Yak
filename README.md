@@ -17,7 +17,7 @@ It uses port 4000 to communicate with the server, so it will have to be opened l
   
 Clone this repository
 1. Run `$ cargo build`,
-1. Run `$ cargo run --bin server` to set up the server program, and then  run `$ cargo run --bin client` to run the client program.   
+1. Run `$ cargo run --bin Server` to set up the server program, and then  run `$ cargo run --bin Client` to run the client program.   
 
 ### Client Commands:
 - `/allowTrust` enables the trusting of users in the chat
