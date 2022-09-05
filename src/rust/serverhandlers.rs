@@ -1,14 +1,8 @@
 use crate::encrypter::Crypto;
+//use crate::log;
 use crate::utils::{decodeBase64, Address, splitAndClean};
 use std::str;
-use actix::io::SinkWrite;
 use std::convert::TryInto;
-use awc::{
-	ws::{Codec, Message},
-	BoxedSocket
-};
-use actix_codec::Framed;
-use futures::stream::SplitSink;
 use base64;
 
 const INSECURE_LABEL:&str = "i";
@@ -18,10 +12,6 @@ const LEAVE_LABEL:&str = "l";
 const PUBLIC_KEY_LABEL:&str = "p";
 const TRUST_LABEL:&str = "t";
 const BLANK_LABEL:&str = "_";
-
-pub fn onStart(websocket:&mut SinkWrite<Message, SplitSink<Framed<BoxedSocket, Codec>, Message>>, state:&mut Crypto){
-	websocket.write(ServerMsg::new(&state.addr(), MsgContent::Join(state.connData.group.clone())).toWritable()).unwrap();
-}
 
 #[derive(Clone, Debug)]
 pub enum MsgContent{
@@ -46,8 +36,8 @@ impl ServerMsg{
 			content: content
 		}
 	}
-	pub fn fromServer(data:&Vec<u8>) -> ServerMsg{
-		let txt = str::from_utf8(data).unwrap();
+	pub fn fromServer(txt:&str) -> ServerMsg{
+		//let txt = str::from_utf8(data).unwrap();
 		//println!("{}", txt); //Uncomment if you want to see raw data
 		let segments: Vec<&str> = splitAndClean(txt, '*');
 		let addrSegments: Vec<&str> = splitAndClean(segments[0], '@');
@@ -91,10 +81,10 @@ impl ServerMsg{
 			MsgContent::Trust(addr) => format!("{}* is trusting {}", TRUST_LABEL, addr.name),
 			MsgContent::Blank() => format!("{}* Error Parsing Text", BLANK_LABEL)
 		};
-		println!("*{}\\{}", self.from.name, content.replace("\r", "").replace("\n", ""));
+		//log(&format!("*{}\\{}", self.from.name, content.replace("\r", "").replace("\n", "")));
 	}
-	pub fn toWritable(self) -> Message {
-		Message::Text(self.toString())
+	pub fn toWritable(self) -> String {
+		self.toString()
 	}
 	pub fn handleSelf(mut self, state:&mut Crypto){
 		if self.from.asSendable() != state.addr().asSendable(){

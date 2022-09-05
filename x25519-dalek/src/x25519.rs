@@ -89,6 +89,27 @@ impl EphemeralSecret {
     }
 }
 
+impl From<[u8; 32]> for EphemeralSecret {
+    /// Given a byte array, construct a x25519 `PublicKey`.
+    fn from(bytes: [u8; 32]) -> EphemeralSecret {
+        EphemeralSecret(Scalar::from_bits(bytes))
+    }
+}
+
+impl EphemeralSecret {
+    /// Convert this public key to a byte array.
+    #[inline]
+    pub fn to_bytes(&self) -> [u8; 32] {
+        self.0.to_bytes()
+    }
+
+    /// View this public key as a byte array.
+    #[inline]
+    pub fn as_bytes(&self) -> &[u8; 32] {
+        self.0.as_bytes()
+    }
+}
+
 impl<'a> From<&'a EphemeralSecret> for PublicKey {
     /// Given an x25519 [`EphemeralSecret`] key, compute its corresponding [`PublicKey`].
     fn from(secret: &'a EphemeralSecret) -> PublicKey {
@@ -263,6 +284,13 @@ impl SharedSecret {
     #[must_use]
     pub fn was_contributory(&self) -> bool {
         !self.0.is_identity()
+    }
+}
+
+impl From<[u8; 32]> for SharedSecret {
+    /// Given a byte array, construct a x25519 `PublicKey`.
+    fn from(bytes: [u8; 32]) -> SharedSecret {
+        SharedSecret(MontgomeryPoint(bytes))
     }
 }
 

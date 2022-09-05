@@ -1,12 +1,9 @@
 
-use actix::*;
 use crate::serverhandlers::MsgContent;
 use crate::encrypter::Crypto;
 use crate::utils::splitAndClean;
 use base64;
 
-#[derive(Message)]
-#[rtype(result = "()")]
 pub struct ClientCommand(pub String);
 impl ClientCommand {
 	pub fn handleSelf(self, state:&mut Crypto) -> Option<MsgContent>{

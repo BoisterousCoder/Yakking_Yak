@@ -1,9 +1,9 @@
-//use std::time::SystemTime;
-//use base64;
-use crate::utils::{ConnectionData, Address, splitAndClean};
-use rand_core::OsRng;
+use crate::utils::{Address, splitAndClean};
+//use crate::log;
 use std::str;
-use x25519_dalek::{EphemeralSecret, PublicKey, SharedSecret};
+use crate::KeyBundle::{KeyBundle, SecretKey};
+use x25519_dalek::PublicKey;
+use serde::{Serialize, Deserialize};
 use aes_gcm::{
     aead::{Aead, KeyInit},
     Aes256Gcm, Nonce // Or `Aes128Gcm`
@@ -11,44 +11,39 @@ use aes_gcm::{
 
 //use crate::store::{attemptFetchIdData, storeID, RawIdData};
 
-const DEVICE_ID:i32 = 12345;
 //const NONCE_MSG:&str = "I like cheese cake";
 
+#[derive(Serialize, Deserialize)]
 pub struct Crypto{
-	pub connData: ConnectionData,
-	pub publicKey: PublicKey,
-	otherPeople: Vec<KeyBundle>,
-	secretKey:EphemeralSecret,
-	deviceId: i32
+	selfData:KeyBundle,
+	otherPeople: Vec<KeyBundle>
 }
 impl Crypto{
-	pub fn new(connData:ConnectionData) -> Crypto{
-		
-		let secretKey = EphemeralSecret::new(OsRng);
-		//println!("{}", secretKey.as_bytes());
+	pub fn new(name:&str, deviceId:i32) -> Crypto{
 		return Crypto{
-			connData: connData,
-			publicKey: PublicKey::from(&secretKey),
-			secretKey: secretKey,
+			selfData: KeyBundle::newSelfKeySet(Address::new(name, deviceId)),
 			otherPeople: vec!(),
-			deviceId: DEVICE_ID
 		}
 	}
 	pub fn addPublicKey(&mut self, addr:Address, publicKeyData:[u8; 32]) {
 		let publicKey = PublicKey::from(publicKeyData);
 		self.otherPeople.push(KeyBundle{
 			address:addr, 
-			sharedSecret: None,
+			secret: SecretKey::Empty(),
 			publicKey:publicKey
 		});
 	}
 	pub fn addr(&self) -> Address{
-		Address::new(&self.connData.name, self.deviceId)
+		Address::new(&self.selfData.address.name, self.selfData.address.deviceId)
 	}
 	pub fn trust(&mut self, name:String) -> Option<&Address>{
 		for mut person in &mut self.otherPeople {
 			if person.address.name.eq(&name){
-				person.sharedSecret = Some(self.secretKey.diffie_hellman(&person.publicKey));
+				person.secret = match &self.selfData.secret {
+					SecretKey::Ephemeral(secret) => SecretKey::Shared(secret.diffie_hellman(&person.publicKey)),
+					SecretKey::Empty() => SecretKey::Empty(), //this code should never be called
+					SecretKey::Shared(_) => SecretKey::Empty() //this code should never be called
+				};
 				return Some(&person.address);
 			}
 		}
@@ -62,17 +57,16 @@ impl Crypto{
 		}
 		return false;
 	}
-	pub fn listPeople(&self){
-		for person in &self.otherPeople {
-			println!("{}@{}", person.address.name, person.address.deviceId);
-		}
-	}
+	// pub fn listPeople(&self){
+	// 	for person in &self.otherPeople {
+	// 		log(&format!("{}@{}", person.address.name, person.address.deviceId));
+	// 	}
+	// }
 	pub fn encrypt(&self, text:String) -> String {
 		let mut encryptedText:String = "".to_string();
 		for person in &self.otherPeople {
-			if person.isTrusting() {
-				//TODO: Encrypt the text with the shared key
-				let key = person.sharedSecret.as_ref().unwrap().as_bytes().clone();
+			if let SecretKey::Shared(secret) = &person.secret{
+				let key = secret.as_bytes().clone();
 				encryptedText += &format!("{}.{};", person.address.asSendable(), crypt(&key, &text, true));
 			}
 		}
@@ -83,12 +77,11 @@ impl Crypto{
 		for addressedMsg in addressedMsgs{
 			let addressedMsgSplit:Vec<&str> = splitAndClean(addressedMsg, '.');
 			let address = Address::fromSendable(addressedMsgSplit[0].to_string());
-			if address.name == self.connData.name {
+			if address.name == self.selfData.address.name {
 				for person in &self.otherPeople{
 					if person.address.name == from.name {
-						if person.isTrusting(){
-							//TODO Actually decrypt the data here
-							let key = person.sharedSecret.as_ref().unwrap().as_bytes().clone();
+						if let SecretKey::Shared(secret) = &person.secret{
+							let key = secret.as_bytes();
 							return crypt(&key, addressedMsgSplit[1], false);
 						}
 						return "has sent a secure message but you cannot read it as you do not trust them".to_string();
@@ -111,16 +104,5 @@ fn crypt(key:&[u8; 32], data:&str, isEncrypting:bool) -> String{
 		let bytes = base64::decode(dataBytes).unwrap();
 		let resBytes = cipher.decrypt(nonce, bytes.as_ref()).unwrap();
 		str::from_utf8(&resBytes).unwrap().to_string()
-	}
-}
-
-pub struct KeyBundle{
-	pub publicKey: PublicKey,
-	pub sharedSecret: Option<SharedSecret>,
-	pub address: Address
-}
-impl KeyBundle{
-	pub fn isTrusting(&self) -> bool{
-		return self.sharedSecret.is_some();
 	}
 }
