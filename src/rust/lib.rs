@@ -1,6 +1,5 @@
 #![allow(non_snake_case)]
 use web_sys::console;
-
 use wasm_bindgen::prelude::*;
 
 mod utils;
@@ -9,16 +8,25 @@ mod serverhandlers;
 mod KeyBundle;
 //mod cmdhandler;
 
-//use serverhandlers::*;
+use crate::encrypter::Crypto;
+use crate::serverhandlers::{ServerMsg, MsgContent};
 
+const RANDOM_NUMBER:u64 = 1234567890; //TODO: fix the seed to its actually random
 
 #[wasm_bindgen]
-pub fn onConnect(name:&str, deviceId:i32, group:&str) -> String{
+pub fn newState(name:&str, deviceId:i32) -> String{
 	console::log_1(&"Initializing State..".into());
-	let state = encrypter::Crypto::new(name, deviceId);
-	//send(&ServerMsg::new(&state.addr(), MsgContent::Join(group.to_string())).toWritable());
+	let state = Crypto::new(name, deviceId, RANDOM_NUMBER);
 	console::log_1(&"Returning Initial State..".into());
 	return serde_json::to_string(&state).unwrap();
+}
+
+#[wasm_bindgen]
+pub fn getJoin(_state:&str, group:&str) -> String{
+	console::log_1(&"Rebuilding State..".into());
+	let state:Crypto = serde_json::from_str(_state).unwrap();
+	console::log_1(&"Building Join Message..".into());
+	return ServerMsg::new(&state.addr(), MsgContent::Join(group.to_string())).toWritable();
 }
 // #[wasm_bindgen]
 // pub fn onMsg(msg:&str, _state: &str) -> String{

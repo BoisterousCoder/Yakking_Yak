@@ -19,9 +19,9 @@ pub struct Crypto{
 	otherPeople: Vec<KeyBundle>
 }
 impl Crypto{
-	pub fn new(name:&str, deviceId:i32) -> Crypto{
+	pub fn new(name:&str, deviceId:i32, randNum:u64) -> Crypto{
 		return Crypto{
-			selfData: KeyBundle::newSelfKeySet(Address::new(name, deviceId)),
+			selfData: KeyBundle::newSelfKeySet(Address::new(name, deviceId), randNum),
 			otherPeople: vec!(),
 		}
 	}

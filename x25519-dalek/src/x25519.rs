@@ -19,8 +19,8 @@ use curve25519_dalek::montgomery::MontgomeryPoint;
 use curve25519_dalek::scalar::Scalar;
 use curve25519_dalek::traits::IsIdentity;
 
-use rand_core::CryptoRng;
-use rand_core::RngCore;
+use rand_chacha::rand_core::CryptoRng;
+use rand_chacha::rand_core::RngCore;
 
 use zeroize::Zeroize;
 

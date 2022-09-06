@@ -5,7 +5,7 @@ use serde::{
 };
 use web_sys::console;
 use x25519_dalek::{EphemeralSecret, PublicKey, SharedSecret};
-use rand_core::OsRng;
+use rand_chacha::{ChaCha20Rng, rand_core::SeedableRng};
 
 use crate::utils::Address;
 
@@ -28,9 +28,10 @@ impl KeyBundle{
 			SecretKey::Empty() => false
 		}
 	}
-	pub fn newSelfKeySet(addr:Address) -> KeyBundle{
+	pub fn newSelfKeySet(addr:Address, randNum:u64) -> KeyBundle{
 		console::log_1(&"Creating Ephemeral Key..".into());
-		let secret = EphemeralSecret::new(OsRng);
+		let rng = ChaCha20Rng::seed_from_u64(randNum);
+		let secret = EphemeralSecret::new(rng);
 		console::log_1(&"Creating Public Key..".into());
 		return KeyBundle{
 			publicKey: PublicKey::from(&secret),
@@ -96,7 +97,7 @@ impl<'de> Deserialize<'de> for KeyBundle {
 		
 		impl<'de> Visitor<'de> for KeyBundleVisitor {
 			type Value = KeyBundle;
-
+			
 			fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
 				formatter.write_str("struct KeyBundle")
 			}
@@ -118,43 +119,64 @@ impl<'de> Deserialize<'de> for KeyBundle {
 			where
 				V: MapAccess<'de>,
 			{
+				console::log_1(&"Rebuilding Keyset..".into());
+
 				let mut public = None;
 				let mut secret = None;
 				let mut addr = None;
-				while let Some(key) = map.next_key()? {
-					match key {
-						Field::Public => {
-							if public.is_some() {
-								return Err(de::Error::duplicate_field("public"));
+				
+				loop {
+					console::log_1(&"start 1".into());
+					let key = map.next_key()?;
+					console::log_1(&"start 2".into());
+					if !key.is_some() { break;}
+					else {
+						match key.unwrap() {
+							Field::Public => {
+								console::log_1(&"start a".into());
+								if public.is_some() {
+									return Err(de::Error::duplicate_field("public"));
+								}
+								let data: [u8; 32] = map.next_value()?;
+								public = Some(PublicKey::from(data));
+								console::log_1(&"end a".into());
 							}
-							let data: [u8; 32] = map.next_value()?;
-							public = Some(PublicKey::from(data));
-						}
-						Field::Shared => {
-							if secret.is_some() {
-								return Err(de::Error::duplicate_field("secret"));
+							Field::Shared => {
+								console::log_1(&"start b".into());
+								if secret.is_some() {
+									return Err(de::Error::duplicate_field("secret"));
+								}
+								let data: [u8; 32] = map.next_value()?;
+								secret = Some(SecretKey::Shared(SharedSecret::from(data)));
+								console::log_1(&"end b".into());
 							}
-							let data: [u8; 32] = map.next_value()?;
-							secret = Some(SecretKey::Shared(SharedSecret::from(data)));
-						}
-						Field::Ephemeral => {
-							if secret.is_some() {
-								return Err(de::Error::duplicate_field("secret"));
+							Field::Ephemeral => {
+								console::log_1(&"start c".into());
+								if secret.is_some() {
+									return Err(de::Error::duplicate_field("secret"));
+								}
+								let data: [u8; 32] = map.next_value()?;
+								secret = Some(SecretKey::Ephemeral(EphemeralSecret::from(data)));
+								console::log_1(&"end c".into());
 							}
-							let data: [u8; 32] = map.next_value()?;
-							secret = Some(SecretKey::Ephemeral(EphemeralSecret::from(data)));
-						}
-						Field::Addr => {
-							if addr.is_some() {
-								return Err(de::Error::duplicate_field("address"));
+							Field::Addr => {
+								console::log_1(&"start d".into());
+								if addr.is_some() {
+									return Err(de::Error::duplicate_field("address"));
+								}
+								addr = Some(map.next_value()?);
+								console::log_1(&"end d".into());
 							}
-							addr = Some(map.next_value()?);
 						}
 					}
 				}
+
 				let public = public.ok_or_else(|| de::Error::missing_field("public"))?;
 				let addr = addr.ok_or_else(|| de::Error::missing_field("addresss"))?;
 				let secret= secret.unwrap_or_else(||SecretKey::Empty());
+
+				console::log_1(&"Finished Rebuilding Keyset".into());
+
 				Ok(KeyBundle{
 					publicKey:public, 
 					secret:secret, 

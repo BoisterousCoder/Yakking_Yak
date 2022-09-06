@@ -157,7 +157,7 @@
 
 extern crate curve25519_dalek;
 
-extern crate rand_core;
+extern crate rand_chacha;
 
 extern crate zeroize;
 
