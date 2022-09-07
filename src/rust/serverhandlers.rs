@@ -71,7 +71,7 @@ impl ServerMsg{
 		};
 		return format!("*{}*{}*{}*", self.from.asSendable(), kind, base64::encode(body.as_bytes()))
 	}
-	pub fn display(self){
+	pub fn display(self) -> String{
 		let content:String = match self.content {
 			MsgContent::PublicKey(_) => format!("{}* is alllowing people to trust them", PUBLIC_KEY_LABEL),
 			MsgContent::SecureText(txt) => format!("{}* {}", SECURE_LABEL, txt),
@@ -81,19 +81,19 @@ impl ServerMsg{
 			MsgContent::Trust(addr) => format!("{}* is trusting {}", TRUST_LABEL, addr.name),
 			MsgContent::Blank() => format!("{}* Error Parsing Text", BLANK_LABEL)
 		};
-		//log(&format!("*{}\\{}", self.from.name, content.replace("\r", "").replace("\n", "")));
+		//TODO: add 
+		return format!("*{}\\{}", self.from.name, content.replace("\r", "").replace("\n", ""));
 	}
 	pub fn toWritable(self) -> String {
 		self.toString()
 	}
 	pub fn handleSelf(mut self, state:&mut Crypto){
-		if self.from.asSendable() != state.addr().asSendable(){
+		if self.from != state.addr(){
 			if let MsgContent::PublicKey(data) = &self.content {
 				state.addPublicKey(self.from.clone(), decodeToPublicKeyBytes(data.clone()));
 			}else if let MsgContent::SecureText(data) = self.content {
 				self.content = MsgContent::SecureText(state.decrypt(&self.from, data));
 			}
-			self.clone().display();
 		}
 	}
 }

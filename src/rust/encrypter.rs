@@ -1,5 +1,4 @@
 use crate::utils::{Address, splitAndClean};
-//use crate::log;
 use std::str;
 use crate::KeyBundle::{KeyBundle, SecretKey};
 use x25519_dalek::PublicKey;
@@ -49,6 +48,14 @@ impl Crypto{
 		}
 		None
 	}
+	pub fn person(&self, name:String) -> Option<&KeyBundle>{
+		for person in &self.otherPeople {
+			if person.address.name.eq(&name){
+				return Some(person);
+			}
+		}
+		return None;
+	}
 	pub fn isTrusting(&self) -> bool{
 		for person in &self.otherPeople {
 			if person.isTrusting(){
@@ -57,11 +64,13 @@ impl Crypto{
 		}
 		return false;
 	}
-	// pub fn listPeople(&self){
-	// 	for person in &self.otherPeople {
-	// 		log(&format!("{}@{}", person.address.name, person.address.deviceId));
-	// 	}
-	// }
+	pub fn listPeople(&self) -> String{
+		let mut s = String::new();
+		for person in &self.otherPeople {
+			s = format!("{}{}@{},\n", s, person.address.name, person.address.deviceId);
+		}
+		return s;
+	}
 	pub fn encrypt(&self, text:String) -> String {
 		let mut encryptedText:String = "".to_string();
 		for person in &self.otherPeople {
@@ -90,6 +99,9 @@ impl Crypto{
 			}
 		}
 		"has sent a message secure but does not trust you".to_string()
+	}
+	pub fn publicKey(&self) -> String{
+		return base64::encode(self.selfData.publicKey.as_bytes());
 	}
 }
 

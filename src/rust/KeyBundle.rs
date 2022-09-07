@@ -14,7 +14,6 @@ pub enum SecretKey {
 	Shared(SharedSecret),
 	Ephemeral(EphemeralSecret)
 }
-
 pub struct KeyBundle{
 	pub publicKey: PublicKey,
 	pub secret: SecretKey,
@@ -46,7 +45,7 @@ impl Serialize for KeyBundle {
 	{
 		let mut state = serializer.serialize_struct("KeyBundle", 3)?;
 		
-		state.serialize_field("publicKey", &self.publicKey.as_bytes())?;
+		state.serialize_field("public", &self.publicKey.as_bytes())?;
 		match &self.secret {
 			SecretKey::Ephemeral(secret) => state.serialize_field("ephemeral", secret.as_bytes()),
 			SecretKey::Shared(secret) => state.serialize_field("shared", secret.as_bytes()),
@@ -126,46 +125,36 @@ impl<'de> Deserialize<'de> for KeyBundle {
 				let mut addr = None;
 				
 				loop {
-					console::log_1(&"start 1".into());
 					let key = map.next_key()?;
-					console::log_1(&"start 2".into());
 					if !key.is_some() { break;}
 					else {
 						match key.unwrap() {
 							Field::Public => {
-								console::log_1(&"start a".into());
 								if public.is_some() {
 									return Err(de::Error::duplicate_field("public"));
 								}
 								let data: [u8; 32] = map.next_value()?;
 								public = Some(PublicKey::from(data));
-								console::log_1(&"end a".into());
 							}
 							Field::Shared => {
-								console::log_1(&"start b".into());
 								if secret.is_some() {
 									return Err(de::Error::duplicate_field("secret"));
 								}
 								let data: [u8; 32] = map.next_value()?;
 								secret = Some(SecretKey::Shared(SharedSecret::from(data)));
-								console::log_1(&"end b".into());
 							}
 							Field::Ephemeral => {
-								console::log_1(&"start c".into());
 								if secret.is_some() {
 									return Err(de::Error::duplicate_field("secret"));
 								}
 								let data: [u8; 32] = map.next_value()?;
 								secret = Some(SecretKey::Ephemeral(EphemeralSecret::from(data)));
-								console::log_1(&"end c".into());
 							}
 							Field::Addr => {
-								console::log_1(&"start d".into());
 								if addr.is_some() {
 									return Err(de::Error::duplicate_field("address"));
 								}
 								addr = Some(map.next_value()?);
-								console::log_1(&"end d".into());
 							}
 						}
 					}
@@ -185,7 +174,7 @@ impl<'de> Deserialize<'de> for KeyBundle {
 			}
 		}
 
-		const FIELDS: &'static [&'static str] = &["publicKey", "shared", "ephemeral", "address"];
+		const FIELDS: &'static [&'static str] = &["public", "shared", "ephemeral", "address"];
 		deserializer.deserialize_struct("KeyBundle", FIELDS, KeyBundleVisitor)
 	}
 }
