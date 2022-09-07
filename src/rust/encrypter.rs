@@ -56,14 +56,6 @@ impl Crypto{
 		}
 		return None;
 	}
-	pub fn isTrusting(&self) -> bool{
-		for person in &self.otherPeople {
-			if person.isTrusting(){
-				return true;
-			}
-		}
-		return false;
-	}
 	pub fn listPeople(&self) -> String{
 		let mut s = String::new();
 		for person in &self.otherPeople {

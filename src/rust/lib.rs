@@ -19,7 +19,12 @@ pub fn newState(name:&str, deviceId:i32) -> String{
 	console::log_1(&"Returning Initial State..".into());
 	return serde_json::to_string(&state).unwrap();
 }
-
+/*
+function here are defined such that the starting keyword tells you what the return
+onExample, returns a message to send
+handleExample, returns a modified state
+getExample, returns a string containing something to display to the user
+*/
 
 #[wasm_bindgen]
 pub fn onJoin(_state:&str, group:&str) -> String{
@@ -46,7 +51,6 @@ pub fn onBroadcast(_state:&str, text:&str) -> String{
 #[wasm_bindgen]
 pub fn onSend(_state:&str, text:&str) -> String{
 	let state:Crypto = serde_json::from_str(_state).unwrap();
-	if state.isTrusting() { return onBroadcast(_state, text); }
 	let content = MsgContent::SecureText(state.encrypt(text.to_string()));
 	let msg =  ServerMsg::new(&state.addr(), content);
 	return msg.toWritable();

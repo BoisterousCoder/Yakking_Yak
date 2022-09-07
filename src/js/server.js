@@ -9,7 +9,7 @@ const port = 4000;
 const app = express();
 const server = http.createServer(app);
 const io = new socket.Server(server);
-const homepage = pug.compileFile('./src/pug/index.pug');
+const homepage = pug.compileFile('./src/pug/main.pug');
 
 app.get('/', (req, res) => {
 	res.send(homepage({

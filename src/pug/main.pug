@@ -1,0 +1,20 @@
+doctype html
+html
+	head
+		title Rusty Chat
+		script(src="/static/start.js" type="module") 
+		link(href="/static/style.css" rel="stylesheet")
+		link(href="/static/switch.css" rel="stylesheet")
+	body
+		#header
+			span#name #{name}
+			form#groupForm(action="")
+				input#groupInput(type="text" autocomplete="off" value="Default")
+				button go
+		ul#messages
+		form#msgForm(action="")
+			label.switch(for="isEncrypting")
+				input#isEncrypting(type="checkbox") 
+				span.slider.round
+			input#msgInput(type="text" autocomplete="off")
+			button send

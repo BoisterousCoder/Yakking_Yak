@@ -20,13 +20,6 @@ pub struct KeyBundle{
 	pub address: Address
 }
 impl KeyBundle{
-	pub fn isTrusting(&self) -> bool{
-		return match self.secret {
-			SecretKey::Shared(_) => true,
-			SecretKey::Ephemeral(_) => false,
-			SecretKey::Empty() => false
-		}
-	}
 	pub fn newSelfKeySet(addr:Address, randNum:u64) -> KeyBundle{
 		console::log_1(&"Creating Ephemeral Key..".into());
 		let rng = ChaCha20Rng::seed_from_u64(randNum);
@@ -118,7 +111,7 @@ impl<'de> Deserialize<'de> for KeyBundle {
 			where
 				V: MapAccess<'de>,
 			{
-				console::log_1(&"Rebuilding Keyset..".into());
+				//console::log_1(&"Rebuilding Keyset..".into());
 
 				let mut public = None;
 				let mut secret = None;
@@ -164,7 +157,7 @@ impl<'de> Deserialize<'de> for KeyBundle {
 				let addr = addr.ok_or_else(|| de::Error::missing_field("addresss"))?;
 				let secret= secret.unwrap_or_else(||SecretKey::Empty());
 
-				console::log_1(&"Finished Rebuilding Keyset".into());
+				//console::log_1(&"Finished Rebuilding Keyset".into());
 
 				Ok(KeyBundle{
 					publicKey:public, 

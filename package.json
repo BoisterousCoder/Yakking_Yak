@@ -4,7 +4,7 @@
   "description": "An End to End encrypted group chatting service ",
   "main": "src/server/index.js",
   "scripts": {
-    "start": "node src/index.js",
+    "start": "node src/js/server.js",
     "build": "wasm-pack build --target web"
   },
   "repository": {
