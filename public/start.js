@@ -1,21 +1,41 @@
-import init, {newState, onJoin, onBroadcast, onSend} from "/compiled/RustyChat.js";
+import init, {newState, onJoin, onBroadcast, onSend, handleIncoming, getDisplay} from "/compiled/RustyChat.js";
+
+const msgsTypes = ['i', 's', 't', 'l', '_', 'p', 'j'];
 
 init().then(() => {
-	let state = newState("Alice", 12345);
+	let name = document.getElementById("name").innerHTML;
+	var displayedMessages = document.getElementById('messages');
+	let state = newState(name, 12345);
+	let socket = io();
+
+	function sendToServer(data){
+		socket.emit(getMessageType(data), data);
+	}
 
 	const initialGroup = addFormListener("group", false, (group) => {
-		console.log(onJoin(state, group))
+		sendToServer(onJoin(state, group))
 	});
-	console.log(onJoin(state, initialGroup))
+	sendToServer(onJoin(state, initialGroup))
 
 	let encryptingCheckbox = document.getElementById("isEncrypting")
 	addFormListener("msg", true, (msg) => {
 		if(encryptingCheckbox.checked){
-			console.log(onSend(state, msg));
+			sendToServer(onSend(state, msg));
 		}else{
-			console.log(onBroadcast(state, msg));
+			sendToServer(onBroadcast(state, msg));
 		}
 	});
+
+	for (let msgType of msgsTypes) {
+		socket.on(msgType, (msg) => {
+			console.log("recived message "+msg);
+			state = handleIncoming(state, msg);
+			let item = document.createElement('li');
+			item.textContent = getDisplay(msg);
+			displayedMessages.appendChild(item);
+			window.scrollTo(0, document.body.scrollHeight);
+		});
+	}
 });
 
 function addFormListener(name, isReseting, callback){
@@ -32,4 +52,8 @@ function addFormListener(name, isReseting, callback){
 		}
 	});
 	return input.value;
+}
+
+function getMessageType(msg){
+	return msg.split('*').map((seg) => seg.trim()).filter((seg) => seg)[1];
 }
