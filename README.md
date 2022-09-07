@@ -1,5 +1,5 @@
 # RustyChat
-Rusty Chat is an end to end encrypted group chat app built with Rust. 
+Rusty Chat is an end to end encrypted group chat app built with Rust on Web Assembly and Node JS. 
 
 ## What is it:
 
@@ -9,23 +9,30 @@ By default, other users are untrusted, and each message is sent encrypted with a
 
 ## How do you use it:
 
-This app depends on the Rust programming language, which can be installed using rustup.
+This app depends on the Rust programming language, rust web assembly compiler targets, and node js.
 
 It uses port 4000 to communicate with the server, so it will have to be opened locally.
 
 ### To build:
   
 Clone this repository
-1. Run `$ cargo build`,
-1. Run `$ cargo run --bin Server` to set up the server program, and then  run `$ cargo run --bin Client` to run the client program.   
+1. Run `$ npm run build` to build the rust web assembly library
+1. Run `$ npm run start` to start the node server   
 
-### Client Commands:
-- `/allowTrust` enables the trusting of users in the chat
-- `/trust <Name>` trusts the user with that name, and sets up a shared key with that user.
-- `/broadcast <message>` sends the message unencrypted to the group.
-- `/list` lists currently trusted users
+### How to Use
+1. navigate to `localhost:4000/n/{usernaame}` where `{username}` is a unique username of your choise
+    - note: choosing a username this way is temperary until I can impliment ucan using the webnative sdk
+2. when the toggle switch in the bottom right is off use the text box and send button at the bottom to send unencrypted messages
+3. to allow someone to trust you click the allow trust button in the top right
+4. once someone has allowed you to trust them, click on their name to trust them
+5. once you have trusted one or more people and they have trusted you back you can send a message using the bottom text box with the toggle switch turned on to send them an encrypted message
+6. usse the text box and the go button in the top right to change your chat room
+    - note: for now you will have to re-establish trust when entering new chat rooms
+
 
 ## Next steps
 Currently the chat log is ephemeral, I am developing a distributed chat log using CRDT to make a persistent log.
 
 Currently the messages are encrypted with a shared key, but not authenticated. I am implementing message signing based on the elliptic curve digital signature algorithm (ECDSA).
+
+Both of these should be solved when I add in my Rusty Log project and The web native api

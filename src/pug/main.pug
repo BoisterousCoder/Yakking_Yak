@@ -9,13 +9,14 @@ html
 	body
 		#header
 			span#name #{name}
+			button#allowTrust.normButton Allow Trusting
 			form#groupForm(action="")
 				input#groupInput(type="text" autocomplete="off" value="Default")
-				button go
+				button.normButton go
 		ul#messages
 		form#msgForm(action="")
 			label.switch(for="isEncrypting")
 				input#isEncrypting(type="checkbox") 
 				span.slider.round
 			input#msgInput(type="text" autocomplete="off")
-			button send
+			button.normButton send

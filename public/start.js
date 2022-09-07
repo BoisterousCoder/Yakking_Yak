@@ -1,11 +1,13 @@
-import init, {newState, onJoin, onBroadcast, onSend, handleIncoming, getDisplay} from "/compiled/RustyChat.js";
+import init, {newState, onJoin, onBroadcast, onSend, handleIncoming, getDisplay, onAllowTrust, onTrust, getRelation, handleTrust} from "/compiled/RustyChat.js";
 
 const msgsTypes = ['i', 's', 't', 'l', '_', 'p', 'j'];
+let state;
 
 init().then(() => {
-	let name = document.getElementById("name").innerHTML;
-	var displayedMessages = document.getElementById('messages');
-	let state = newState(name, 12345);
+	let name = document.getElementById("name").innerHTML.trim();
+	let displayedMessages = document.getElementById('messages');
+	let allowTrustButton = document.getElementById('allowTrust');
+	state = newState(name, 12345);
 	let socket = io();
 
 	function sendToServer(data){
@@ -31,11 +33,22 @@ init().then(() => {
 			console.log("recived message "+msg);
 			state = handleIncoming(state, msg);
 			let item = document.createElement('li');
-			item.textContent = getDisplay(msg);
-			displayedMessages.appendChild(item);
+			item.innerHTML = getDisplay(state, msg);
+			item.addEventListener('click', (event) => {
+				let name = event.target.innerHTML.split('*').map((seg) => seg.trim()).filter((seg) => seg)[0];
+				if(getRelation(state, name) == "allowedTrust"){
+					state = handleTrust(state, name);
+					sendToServer(onTrust(state, name));
+				}
+			})
+			displayedMessages.prepend(item);
 			window.scrollTo(0, document.body.scrollHeight);
 		});
 	}
+
+	allowTrustButton.addEventListener("click",() => {
+		sendToServer(onAllowTrust(state));
+	});
 });
 
 function addFormListener(name, isReseting, callback){

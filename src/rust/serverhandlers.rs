@@ -59,40 +59,39 @@ impl ServerMsg{
 			content: content
 		}
 	}
-	pub fn toString(self) -> String{
-		let (kind, body):(&str, String) = match self.content {
-			MsgContent::PublicKey(publicKey) => (PUBLIC_KEY_LABEL, publicKey),
-			MsgContent::SecureText(text) => (SECURE_LABEL, text),
-			MsgContent::InsecureText(txt) => (INSECURE_LABEL, txt),
-			MsgContent::Join(group) => (JOIN_LABEL, group),
-			MsgContent::Leave(group) => (LEAVE_LABEL, group),
+	pub fn toString(&self) -> String{
+		let (kind, body):(&str, String) = match &self.content {
+			MsgContent::PublicKey(publicKey) => (PUBLIC_KEY_LABEL, publicKey.to_string()),
+			MsgContent::SecureText(text) => (SECURE_LABEL, text.to_string()),
+			MsgContent::InsecureText(txt) => (INSECURE_LABEL, txt.to_string()),
+			MsgContent::Join(group) => (JOIN_LABEL, group.to_string()),
+			MsgContent::Leave(group) => (LEAVE_LABEL, group.to_string()),
 			MsgContent::Trust(addr) => (TRUST_LABEL, addr.asSendable()),
 			MsgContent::Blank() => (BLANK_LABEL, String::from("_"))
 		};
 		return format!("*{}*{}*{}*", self.from.asSendable(), kind, base64::encode(body.as_bytes()))
 	}
-	pub fn display(self) -> String{
-		let content:String = match self.content {
-			MsgContent::PublicKey(_) => format!("{}* is alllowing people to trust them", PUBLIC_KEY_LABEL),
-			MsgContent::SecureText(txt) => format!("{}* {}", SECURE_LABEL, txt),
-			MsgContent::InsecureText(txt) => format!("{}* {}", INSECURE_LABEL, txt),
-			MsgContent::Join(_) => format!("{}* went online", JOIN_LABEL),
-			MsgContent::Leave(_) => format!("{}* went offline", JOIN_LABEL),
-			MsgContent::Trust(addr) => format!("{}* is trusting {}", TRUST_LABEL, addr.name),
-			MsgContent::Blank() => format!("{}* Error Parsing Text", BLANK_LABEL)
+	pub fn display(&self, state:&Crypto) -> String{
+		let (content, label) = match &self.content {
+			MsgContent::PublicKey(_) => ("is alllowing people to trust them".to_string(), PUBLIC_KEY_LABEL),
+			MsgContent::SecureText(txt) => (state.decrypt(&self.from, txt.to_string()), SECURE_LABEL),
+			MsgContent::InsecureText(txt) => (txt.to_string(), INSECURE_LABEL),
+			MsgContent::Join(_) => ("went online".to_string(), JOIN_LABEL),
+			MsgContent::Leave(_) => ("went offline".to_string(), LEAVE_LABEL),
+			MsgContent::Trust(addr) => (format!("is trusting {}", addr.name), TRUST_LABEL),
+			MsgContent::Blank() => ("Error Parsing Text".to_string(), BLANK_LABEL)
 		};
+		let relation = state.relation((&self.from.name).to_string());
 		//TODO: add 
-		return format!("*{}\\{}", self.from.name, content.replace("\r", "").replace("\n", ""));
+		return format!("<span class=\"{}\">*{}*\\{}</span> {}", relation, self.from.name, label, content.replace("\r", ""));
 	}
 	pub fn toWritable(self) -> String {
 		self.toString()
 	}
-	pub fn handleSelf(mut self, state:&mut Crypto){
+	pub fn handleSelf(&self, state:&mut Crypto){
 		if self.from != state.addr(){
 			if let MsgContent::PublicKey(data) = &self.content {
 				state.addPublicKey(self.from.clone(), decodeToPublicKeyBytes(data.clone()));
-			}else if let MsgContent::SecureText(data) = self.content {
-				self.content = MsgContent::SecureText(state.decrypt(&self.from, data));
 			}
 		}
 	}

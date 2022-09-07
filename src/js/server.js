@@ -12,9 +12,9 @@ const server = http.createServer(app);
 const io = new socket.Server(server);
 const homepage = pug.compileFile('./src/pug/main.pug');
 
-app.get('/', (req, res) => {
+app.get('/n/:name', (req, res) => {
 	res.send(homepage({
-		name: 'Savannah'
+		name: req.param("name")
   	}));
 });
 app.use('/compiled', express.static('pkg'))

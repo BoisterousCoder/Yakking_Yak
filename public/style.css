@@ -17,15 +17,6 @@ body { margin: 0; padding-bottom: 3rem; font-family: -apple-system, BlinkMacSyst
     margin: 0.25rem; 
 }
 #msgInput:focus { outline: none; }
-#msgForm > button { 
-    background: #333; 
-    border: none; 
-    padding: 0 1rem; 
-    margin: 0.25rem; 
-    border-radius: 3px;
-    outline: none; 
-    color: #fff; 
-}
 
 #header {
     background: rgba(0, 0, 0, 0.15); 
@@ -46,7 +37,7 @@ body { margin: 0; padding-bottom: 3rem; font-family: -apple-system, BlinkMacSyst
     right: 0;
     padding: 0.25rem;
 }
-#groupForm > button { 
+.normButton { 
     background: #333; 
     border: none; 
     padding: 0 1rem; 
@@ -55,9 +46,36 @@ body { margin: 0; padding-bottom: 3rem; font-family: -apple-system, BlinkMacSyst
     outline: none; 
     color: #fff; 
 }
+.trusted {
+    color: darkgreen;
+    font-weight: bold;
+}
+.allowedTrust{
+    color: darkred;
+    font-weight: bold;
+}
+.self{
+    color: darkblue;
+    font-weight: bold;
+}
+.unknown{
+    color: black;
+    font-weight: bold;
+}
 #groupInput { border: none; padding: 0 1rem; flex-grow: 1; border-radius: 2rem; margin: 0.25rem; }
 #groupInput:focus { outline: none; }
 
-#messages { list-style-type: none; margin: 0; padding: 3rem 0; }
+#messages { 
+    list-style-type: none;
+    top:3rem;
+    left:0;
+    right:0;
+    bottom: 3rem;
+    padding: 0;
+    margin: 0;
+    position:fixed;
+    display: flex;
+    flex-direction: column-reverse;
+}
 #messages > li { padding: 0.5rem 1rem; }
 #messages > li:nth-child(odd) { background: #efefef; }

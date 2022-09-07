@@ -55,6 +55,7 @@ pub fn onSend(_state:&str, text:&str) -> String{
 	let msg =  ServerMsg::new(&state.addr(), content);
 	return msg.toWritable();
 }
+#[wasm_bindgen]
 pub fn onTrust(_state:&str, name:&str) -> String{
 	let state:encrypter::Crypto = serde_json::from_str(_state).unwrap();
 	let content = match state.person(name.to_string()) {
@@ -66,15 +67,20 @@ pub fn onTrust(_state:&str, name:&str) -> String{
 		None => "".to_string()
 	};
 }
-
 #[wasm_bindgen]
 pub fn getList(_state:&str) -> String{
 	let state:Crypto = serde_json::from_str(_state).unwrap();
 	return state.listPeople();
 }
 #[wasm_bindgen]
-pub fn getDisplay(msg:&str) -> String{
-	return ServerMsg::fromServer(msg).display();
+pub fn getDisplay(_state:&str, msg:&str) -> String{
+	let state:Crypto = serde_json::from_str(_state).unwrap();
+	return ServerMsg::fromServer(msg).display(&state);
+}
+#[wasm_bindgen]
+pub fn getRelation(_state:&str, name:&str) -> String{
+	let state:Crypto = serde_json::from_str(_state).unwrap();
+	return state.relation(name.to_string());
 }
 
 #[wasm_bindgen]

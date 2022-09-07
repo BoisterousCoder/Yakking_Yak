@@ -49,12 +49,27 @@ impl Crypto{
 		None
 	}
 	pub fn person(&self, name:String) -> Option<&KeyBundle>{
+		if name == self.selfData.address.name {
+			return Some(&self.selfData);
+		}
 		for person in &self.otherPeople {
 			if person.address.name.eq(&name){
 				return Some(person);
 			}
 		}
 		return None;
+	}
+	pub fn relation(&self, name:String) -> String {
+		return match self.person(name.to_string()) {
+			Some(person) => {
+				match person.secret {
+					SecretKey::Ephemeral(_) => "self".to_string(),
+					SecretKey::Shared(_) => "trusted".to_string(),
+					SecretKey::Empty() => "allowedTrust".to_string()
+				}
+			},
+			None => "unknown".to_string()
+		};
 	}
 	pub fn listPeople(&self) -> String{
 		let mut s = String::new();
