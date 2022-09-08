@@ -2,13 +2,15 @@ doctype html
 html
 	head
 		title Rusty Chat
-		script(src="/static/socketio.js") 
-		script(src="/static/start.js" type="module") 
-		link(href="/static/style.css" rel="stylesheet")
-		link(href="/static/switch.css" rel="stylesheet")
+		script(src="/static/libs/socketio.js") 
+		script(src="https://unpkg.com/webnative@latest/dist/index.umd.min.js") 
+		link(href="/static/libs/switch.css" rel="stylesheet")
+		link(href="/static/css/style.css" rel="stylesheet")
+		script(src="/static/js/login.js" type="module")
+		script(src="/static/js/start.js" type="module") 
 	body
 		#header
-			span#name #{name}
+			span#name
 			button#allowTrust.normButton Allow Trusting
 			form#groupForm(action="")
 				input#groupInput(type="text" autocomplete="off" value="Default")

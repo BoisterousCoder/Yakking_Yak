@@ -2,7 +2,6 @@
   "name": "rusty-chat",
   "version": "0.1.0",
   "description": "An End to End encrypted group chatting service ",
-  "main": "src/server/index.js",
   "scripts": {
     "start": "node src/js/server.js",
     "build": "wasm-pack build --target web"
