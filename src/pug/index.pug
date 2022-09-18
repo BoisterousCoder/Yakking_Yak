@@ -2,12 +2,13 @@ doctype html
 html
 	head
 		title Rusty Chat
-		script(src="/static/libs/socketio.js") 
+		base(href=".")
+		script(src="libs/socketio.js") 
 		script(src="https://unpkg.com/webnative@latest/dist/index.umd.min.js") 
-		link(href="/static/libs/switch.css" rel="stylesheet")
-		link(href="/static/css/style.css" rel="stylesheet")
-		script(src="/static/js/login.js" type="module")
-		script(src="/static/js/start.js" type="module") 
+		link(href="libs/switch.css" rel="stylesheet")
+		link(href="css/style.css" rel="stylesheet")
+		script(src="js/login.js" type="module")
+		script(src="js/start.js" type="module") 
 	body
 		#header
 			span#name

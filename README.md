@@ -16,12 +16,13 @@ It uses port 4000 to communicate with the server, so it will have to be opened l
 ### To build:
   
 Clone this repository
-1. Run `$ npm run build` to build the rust web assembly library
+1. Run `$ npm install pug-cli -g` to install the pug cli
+1. Run `$ npm run install` to install required nodejs libraries
+1. Run `$ npm run build` to build the rust web assembly library to build the pug files to html
 1. Run `$ npm run start` to start the node server   
 
 ### How to Use
-1. navigate to `localhost:4000/n/{usernaame}` where `{username}` is a unique username of your choise
-    - note: choosing a username this way is temperary until I can impliment ucan using the webnative sdk
+1. navigate to `localhost:4000` where `{username}` is a unique username of your choise
 2. when the toggle switch in the bottom right is off use the text box and send button at the bottom to send unencrypted messages
 3. to allow someone to trust you click the allow trust button in the top right
 4. once someone has allowed you to trust them, click on their name to trust them

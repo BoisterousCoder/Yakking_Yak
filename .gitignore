@@ -1,4 +1,6 @@
 /target
+/public/bin/*
+/public/*.html
 *.keys
 /.project
 Cargo.lock

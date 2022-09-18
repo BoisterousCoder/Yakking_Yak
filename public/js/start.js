@@ -1,4 +1,4 @@
-import init, {newState, onJoin, onBroadcast, onSend, handleIncoming, getDisplay, onAllowTrust, onTrust, getRelation, handleTrust} from "/compiled/RustyChat.js";
+import init, {newState, onJoin, onBroadcast, onSend, handleIncoming, getDisplay, onAllowTrust, onTrust, getRelation, handleTrust} from "../bin/RustyChat.js";
 import { onLogin } from "./login.js";
 
 const msgsTypes = ['i', 's', 't', 'l', '_', 'p', 'j'];
