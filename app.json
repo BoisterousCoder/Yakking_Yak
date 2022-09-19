@@ -1,0 +1,15 @@
+{
+    "name": "yakking-yak",
+    "description": "A end to end ecrypted chat app",
+    "buildpacks":["heroku/nodejs", "https://github.com/solana-labs/heroku-buildpack-rust-wasm-pack.git"],
+    "formation": {
+        "web": {
+          "quantity": 1,
+          "size": "standard-1x"
+        }
+    },
+    "repository": "https://github.com/BoisterousCoder/Yakking_Yak",
+    "scripts": {
+        "postdeploy": "npm run build"
+    }
+}
