@@ -3,22 +3,6 @@
 version = 3
 
 [[package]]
-name = "RustyChat"
-version = "0.1.0"
-dependencies = [
- "aes-gcm",
- "base64",
- "getrandom 0.2.7",
- "rand_chacha",
- "rand_core 0.5.1",
- "serde",
- "serde_json",
- "wasm-bindgen",
- "web-sys",
- "x25519-dalek",
-]
-
-[[package]]
 name = "aead"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -480,6 +464,22 @@ dependencies = [
  "curve25519-dalek",
  "rand_chacha",
  "zeroize",
+]
+
+[[package]]
+name = "yakking_yak"
+version = "0.1.0"
+dependencies = [
+ "aes-gcm",
+ "base64",
+ "getrandom 0.2.7",
+ "rand_chacha",
+ "rand_core 0.5.1",
+ "serde",
+ "serde_json",
+ "wasm-bindgen",
+ "web-sys",
+ "x25519-dalek",
 ]
 
 [[package]]

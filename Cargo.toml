@@ -1,5 +1,5 @@
 [package]
-name = "RustyChat"
+name = "yakking_yak"
 license = "MPL-2.0"
 version = "0.1.0"
 authors = ["BoisterousCoder <boisterouscoder@gmail.com>"]

@@ -1,5 +1,5 @@
-# RustyChat
-Rusty Chat is an end to end encrypted group chat app built with Rust on Web Assembly and Node JS. 
+# Yakking Yak
+Yakking Yak is an end to end encrypted group chat app built with Rust on Web Assembly and Node JS. 
 
 ## What is it:
 
@@ -17,6 +17,7 @@ It uses port 4000 to communicate with the server, so it will have to be opened l
   
 Clone this repository
 1. Run `$ npm install pug-cli -g` to install the pug cli
+1. Run `$ npm install browserify -g` to install browserify
 1. Run `$ npm run install` to install required nodejs libraries
 1. Run `$ npm run build` to build the rust web assembly library to build the pug files to html
 1. Run `$ npm run start` to start the node server   
@@ -37,3 +38,5 @@ Currently the chat log is ephemeral, I am developing a distributed chat log usin
 Currently the messages are encrypted with a shared key, but not authenticated. I am implementing message signing based on the elliptic curve digital signature algorithm (ECDSA).
 
 Both of these should be solved when I add in my Rusty Log project and The web native api
+
+Currently Messages are sent to a server to be sent to out to everyone. I plan on changing this to be peer to peer. 

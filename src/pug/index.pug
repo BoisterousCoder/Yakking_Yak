@@ -1,14 +1,18 @@
 doctype html
 html
 	head
-		title Rusty Chat
+		title Yakking Yak
 		base(href=".")
-		script(src="libs/socketio.js") 
-		script(src="https://unpkg.com/webnative@latest/dist/index.umd.min.js") 
-		link(href="libs/switch.css" rel="stylesheet")
-		link(href="css/style.css" rel="stylesheet")
-		script(src="js/login.js" type="module")
-		script(src="js/start.js" type="module") 
+
+		link(href="lib/switch.css" rel="stylesheet")
+		script(src="https://unpkg.com/webnative@latest/dist/index.umd.min.js")
+		//- script(src="lib/webnative.js" ) 
+
+		link(href="bin/style.css" rel="stylesheet")
+		script. 
+			var rust_crate = import("./bin/yakking_yak.js");
+			console.log(rust_crate);
+		script(src="bin/main.js")
 	body
 		#header
 			span#name

@@ -1,10 +1,15 @@
 {
-  "name": "rusty-chat",
+  "name": "yakking_yak",
   "version": "0.1.0",
   "description": "An End to End encrypted group chatting service ",
   "scripts": {
     "start": "node src/js/server.js",
-    "build": "wasm-pack build --target web --out-dir ./public/bin && pug ./src/pug -o ./public"
+    "build": "npm run build-wasm && npm run build-js && npm run build-html && npm run build-css",
+    "build-wasm": "wasm-pack build --target web && npm run build-wasm-copy",
+    "build-wasm-copy":"cp -r ./pkg/yakking_yak.js ./public/bin/yakking_yak.js && cp -r ./pkg/yakking_yak_bg.wasm ./public/bin/yakking_yak_bg.wasm",
+    "build-html": "pug ./src/pug -o ./public",
+    "build-js": "browserify src/js/start.js -o public/bin/main.js",
+    "build-css": "cp -r ./src/css/style.css ./public/bin/style.css"
   },
   "repository": {
     "type": "git",
@@ -18,6 +23,17 @@
   "homepage": "https://github.com/BoisterousCoder/RustyChat#readme",
   "dependencies": {
     "express": "^4.18.1",
-    "socket.io": "^4.5.2"
+    "socket.io": "^4.5.2",
+    "socket.io-client": "^4.5.2"
+  },
+  "devDependencies": {
+    "browserify-shim": "^3.8.15"
+  },
+  "browserify": {
+    "transform": [ "browserify-shim" ]
+  },
+  "browserify-shim": {
+    "webnative": "global:webnative",
+    "rust_crate": "global:rust_crate"
   }
 }
