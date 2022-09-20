@@ -6,9 +6,9 @@
     "start": "node src/js/server.js",
     "build": "npm run build-wasm && npm run build-js && npm run build-html && npm run build-css",
     "build-wasm": "wasm-pack build --target web && npm run build-wasm-copy",
-    "build-wasm-copy":"cp -r ./pkg/yakking_yak.js ./public/bin/yakking_yak.js && cp -r ./pkg/yakking_yak_bg.wasm ./public/bin/yakking_yak_bg.wasm",
-    "build-html": "pug ./src/pug -o ./public",
-    "build-js": "browserify src/js/start.js -o public/bin/main.js",
+    "build-wasm-copy": "cp -r ./pkg/yakking_yak.js ./public/bin/yakking_yak.js && cp -r ./pkg/yakking_yak_bg.wasm ./public/bin/yakking_yak_bg.wasm",
+    "build-html": "npx pug ./src/pug -o ./public",
+    "build-js": "npx browserify src/js/start.js -o public/bin/main.js",
     "build-css": "cp -r ./src/css/style.css ./public/bin/style.css"
   },
   "repository": {
@@ -27,10 +27,14 @@
     "socket.io-client": "^4.5.2"
   },
   "devDependencies": {
-    "browserify-shim": "^3.8.15"
+    "browserify": "^17.0.0",
+    "browserify-shim": "^3.8.15",
+    "pug": "^3.0.2"
   },
   "browserify": {
-    "transform": [ "browserify-shim" ]
+    "transform": [
+      "browserify-shim"
+    ]
   },
   "browserify-shim": {
     "webnative": "global:webnative",
