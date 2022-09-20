@@ -3,8 +3,9 @@ const http = require('http');
 const socket = require("socket.io");
 
 const msgsTypesToRepeat = ['i', 's', 't', 'l', '_', 'p'];
-const hostname = '127.0.0.1';
-const port = 4000;
+const hostname = process.env.HOSTNAME||'localhost';
+const port = process.env.PORT||4000;
+
 
 const app = express();
 const server = http.createServer(app);
