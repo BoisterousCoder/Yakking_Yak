@@ -38,3 +38,6 @@ Currently the messages are encrypted with a shared key, but not authenticated. I
 Both of these should be solved when I add in my Rusty Log project and The web native api
 
 Currently Messages are sent to a server to be sent to out to everyone. I plan on changing this to be peer to peer. 
+
+## Troubleshooting
+You may need to create a bin folder in the public folder for the program to build into
