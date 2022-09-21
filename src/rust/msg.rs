@@ -25,18 +25,18 @@ pub enum MsgContent{
 }
 
 #[derive(Clone, Debug)]
-pub struct ServerMsg{
+pub struct YakMsg{
 	pub from:Address,
 	pub content:MsgContent
 }
-impl ServerMsg{
-	pub fn new(from:&Address, content:MsgContent) -> ServerMsg{
-		return ServerMsg{
+impl YakMsg{
+	pub fn new(from:&Address, content:MsgContent) -> YakMsg{
+		return YakMsg{
 			from: from.clone(),
 			content: content
 		}
 	}
-	pub fn fromServer(txt:&str) -> ServerMsg{
+	pub fn fromServer(txt:&str) -> YakMsg{
 		//let txt = str::from_utf8(data).unwrap();
 		//println!("{}", txt); //Uncomment if you want to see raw data
 		let segments: Vec<&str> = splitAndClean(txt, '*');
@@ -54,7 +54,7 @@ impl ServerMsg{
 			BLANK_LABEL => MsgContent::Blank(),
 			&_ => MsgContent::Blank()
 		};
-		return ServerMsg{
+		return YakMsg{
 			from: Address::new(&name, deviceId), 
 			content: content
 		}

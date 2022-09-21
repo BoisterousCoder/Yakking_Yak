@@ -4,11 +4,12 @@ use wasm_bindgen::prelude::*;
 
 mod utils;
 mod encrypter;
-mod serverhandlers;
+mod msg;
 mod KeyBundle;
+mod handler;
 
 use crate::encrypter::Crypto;
-use crate::serverhandlers::{ServerMsg, MsgContent};
+use crate::msg::{YakMsg, MsgContent};
 
 const RANDOM_NUMBER:u64 = 1234567890; //TODO: fix the seed to its actually random
 
@@ -30,14 +31,14 @@ getExample, returns a string containing something to display to the user
 pub fn onJoin(_state:&str, group:&str) -> String{
 	let state:Crypto = serde_json::from_str(_state).unwrap();
 	let content = MsgContent::Join(group.to_string());
-	let msg =  ServerMsg::new(&state.addr(), content);
+	let msg =  YakMsg::new(&state.addr(), content);
 	return msg.toWritable();
 }
 #[wasm_bindgen]
 pub fn onAllowTrust(_state:&str) -> String{
 	let state:Crypto = serde_json::from_str(_state).unwrap();
 	let content = MsgContent::PublicKey(state.publicKey());
-	let msg =  ServerMsg::new(&state.addr(), content);
+	let msg =  YakMsg::new(&state.addr(), content);
 	return msg.toWritable();
 }
 
@@ -45,14 +46,14 @@ pub fn onAllowTrust(_state:&str) -> String{
 pub fn onBroadcast(_state:&str, text:&str) -> String{
 	let state:Crypto = serde_json::from_str(_state).unwrap();
 	let content = MsgContent::InsecureText(text.to_string());
-	let msg =  ServerMsg::new(&state.addr(), content);
+	let msg =  YakMsg::new(&state.addr(), content);
 	return msg.toWritable();
 }
 #[wasm_bindgen]
 pub fn onSend(_state:&str, text:&str) -> String{
 	let state:Crypto = serde_json::from_str(_state).unwrap();
 	let content = MsgContent::SecureText(state.encrypt(text.to_string()));
-	let msg =  ServerMsg::new(&state.addr(), content);
+	let msg =  YakMsg::new(&state.addr(), content);
 	return msg.toWritable();
 }
 #[wasm_bindgen]
@@ -63,7 +64,7 @@ pub fn onTrust(_state:&str, name:&str) -> String{
 		None => None
 	};
 	return match content {
-		Some(x) => ServerMsg::new(&state.addr(), x).toWritable(),
+		Some(x) => YakMsg::new(&state.addr(), x).toWritable(),
 		None => "".to_string()
 	};
 }
@@ -75,7 +76,7 @@ pub fn getList(_state:&str) -> String{
 #[wasm_bindgen]
 pub fn getDisplay(_state:&str, msg:&str) -> String{
 	let state:Crypto = serde_json::from_str(_state).unwrap();
-	return ServerMsg::fromServer(msg).display(&state);
+	return YakMsg::fromServer(msg).display(&state);
 }
 #[wasm_bindgen]
 pub fn getRelation(_state:&str, name:&str) -> String{
@@ -86,7 +87,7 @@ pub fn getRelation(_state:&str, name:&str) -> String{
 #[wasm_bindgen]
 pub fn handleIncoming(_state: &str, msg:&str) -> String{
 	let mut state:encrypter::Crypto = serde_json::from_str(_state).unwrap();
-	ServerMsg::fromServer(msg).handleSelf(&mut state);
+	YakMsg::fromServer(msg).handleSelf(&mut state);
 	return serde_json::to_string(&state).unwrap();
 }
 #[wasm_bindgen]
