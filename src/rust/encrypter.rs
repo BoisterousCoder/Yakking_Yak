@@ -60,6 +60,18 @@ impl Crypto{
 		}
 		return None;
 	}
+	pub fn person_from_pub_key(&self, key:&str) -> Option<&KeyBundle>{
+		// if self.public_key() == key.to_string() {
+			// return Some(&self.self_data);
+		// }else {
+		for person in &self.other_people {
+			if base64::encode(person.public_key.as_bytes()) == key.to_string(){
+				return Some(person);
+			}
+		}
+		return None;
+		// }
+	}
 	pub fn relation(&self, forien:&Address) -> String {
 		return match self.person(forien) {
 			Some(key_bundle) => {
@@ -84,7 +96,7 @@ impl Crypto{
 		for person in &self.other_people {
 			if let SecretKey::Shared(secret) = &person.secret{
 				let key = secret.as_bytes().clone();
-				encrypted_text += &format!("{}.{};", person.address.asSendable(), crypt(&key, &text, true));
+				encrypted_text += &format!("{}*{};", person.address.asSendable(), crypt(&key, &text, true));
 			}
 		}
 		return encrypted_text;
@@ -92,24 +104,27 @@ impl Crypto{
 	pub fn decrypt(&self, from:&Address, addressed_msg_data:String) -> String {
 		let addressed_msgs:Vec<&str> = splitAndClean(&addressed_msg_data, ';');
 		for addressed_msg in addressed_msgs{
-			let addressed_msgSplit:Vec<&str> = splitAndClean(addressed_msg, '.');
-			let address = Address::fromSendable(addressed_msgSplit[0].to_string());
-			if address.name == self.self_data.address.name {
+			let addressed_msg_split:Vec<&str> = splitAndClean(addressed_msg, '*');
+			let address = Address::fromSendable(addressed_msg_split[0].to_string());
+			if address == self.self_data.address {
 				for person in &self.other_people{
-					if person.address.name == from.name {
+					if &person.address == from {
 						if let SecretKey::Shared(secret) = &person.secret{
 							let key = secret.as_bytes();
-							return crypt(&key, addressed_msgSplit[1], false);
+							return crypt(&key, addressed_msg_split[1], false);
 						}
 						return "has sent a secure message but you cannot read it as you do not trust them".to_string();
 					}
 				}
 			}
 		}
-		"has sent a message secure but does not trust you".to_string()
+		"has sent a secure message but does not trust you".to_string()
 	}
 	pub fn public_key(&self) -> String{
 		return base64::encode(self.self_data.public_key.as_bytes());
+	}
+	pub fn get_address(&self) -> Address{
+		return self.self_data.address.clone();
 	}
 }
 

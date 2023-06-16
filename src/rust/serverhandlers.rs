@@ -70,18 +70,41 @@ impl ServerMsg{
 		};
 		return format!("*{}*{}*{}*", self.from.asSendable(), kind, base64::encode(body.as_bytes()))
 	}
-	pub fn display(&self, state:&Crypto) -> String{
-		let (content, label) = match &self.content {
-			MsgContent::PublicKey(_) => ("is alllowing people to trust them".to_string(), PUBLIC_KEY_LABEL),
-			MsgContent::SecureText(txt) => (state.decrypt(&self.from, txt.to_string()), SECURE_LABEL),
-			MsgContent::InsecureText(txt) => (txt.to_string(), INSECURE_LABEL),
-			MsgContent::Join(_) => ("went online".to_string(), JOIN_LABEL),
-			MsgContent::Leave(_) => ("went offline".to_string(), LEAVE_LABEL),
-			MsgContent::Trust(addr) => (format!("is trusting {}", addr.name), TRUST_LABEL),
-			MsgContent::Blank() => ("Error Parsing Text".to_string(), BLANK_LABEL)
+	pub fn display(&self, state:&Crypto) -> Option<String>{
+		let msg_data = match &self.content {
+			MsgContent::PublicKey(pub_key) => {
+				if state.person_from_pub_key(pub_key).is_some() {
+					None
+				}else if self.from != state.get_address(){
+					Some(("is alllowing people to trust them".to_string(), PUBLIC_KEY_LABEL))
+				}else{
+					None
+				}
+			},
+			MsgContent::SecureText(txt) => {
+				if self.from == state.get_address() {
+					None
+				}else {
+					Some((state.decrypt(&self.from, txt.to_string()), SECURE_LABEL))
+				}
+			},
+			MsgContent::InsecureText(txt) => Some((txt.to_string(), INSECURE_LABEL)),
+			MsgContent::Join(_) => Some(("went online".to_string(), JOIN_LABEL)),
+			MsgContent::Leave(_) => Some(("went offline".to_string(), LEAVE_LABEL)),
+			MsgContent::Trust(addr) => {
+				let relation = state.relation(&addr);
+				Some((format!("is trusting <span class=\"{}\">{}</span>", relation, addr.name), TRUST_LABEL))
+			},
+			MsgContent::Blank() => Some(("Error Parsing Text".to_string(), BLANK_LABEL))
 		};
-		let relation = state.relation(&self.from);
-		return format!("<span class=\"{}\">*{}*\\{}</span> {}", relation, self.from.name, label, content.replace("\r", ""));
+		return match msg_data {
+			Some((content, label)) => {
+				let relation = state.relation(&self.from);
+				Some(format!("<span class=\"{}\">({}) {}</span> {}", relation, label, self.from.name, content.replace("\r", "")))
+			},
+			None => None
+		}
+		
 	}
 	pub fn toWritable(self) -> String {
 		self.toString()

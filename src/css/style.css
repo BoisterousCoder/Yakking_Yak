@@ -59,7 +59,7 @@ body { margin: 0; padding-bottom: 3rem; font-family: -apple-system, BlinkMacSyst
     font-weight: bold;
 }
 .unknown{
-    color: black;
+    color: darkred;
     font-weight: bold;
 }
 #groupInput { border: none; padding: 0 1rem; flex-grow: 1; border-radius: 2rem; margin: 0.25rem; }

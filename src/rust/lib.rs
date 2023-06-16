@@ -30,8 +30,8 @@ pub fn startListeners(){
 	let group_form = dom.get_element_by_id("groupForm").unwrap();
 	createListener(group_form, "submit", "value", "groupInput", true, false);
 
-	let allow_trust_button = dom.get_element_by_id("allowTrust").unwrap();
-	createListener(allow_trust_button, "click", "value", "allowTrust", false, false);
+	// let allow_trust_button = dom.get_element_by_id("allowTrust").unwrap();
+	// createListener(allow_trust_button, "click", "value", "allowTrust", false, false);
 
 	let is_encrypting_button = dom.get_element_by_id("isEncrypting").unwrap();
 	createListener(is_encrypting_button, "click", "checked", "isEncrypting", false, false);
@@ -59,8 +59,13 @@ pub fn handleEvent(_state:&str, send_msg:Function, event_name:&str, value:&str) 
 		"msg" => {
 			console::log_1(&format!("Recieved Msg {}", &value).into());
 			let msg = ServerMsg::fromServer(value);
+			display_msg(&msg, &state);
 			msg.handleSelf(&mut state);
-			display_msg(msg, &state);
+			if let MsgContent::Join(_) = msg.content {
+				let content_to_send = MsgContent::PublicKey(state.public_key());
+				let msg_to_send = ServerMsg::new(&state.addr(), content_to_send);
+				send_msg.call1(&JsValue::null(), &msg_to_send.toWritable().into());
+			}
 		},
 		"msgInput" => {
 			console::log_1(&"Sent Message".into());
@@ -88,22 +93,18 @@ pub fn handleEvent(_state:&str, send_msg:Function, event_name:&str, value:&str) 
 				_ => false
 			};
 		},
-		"allowTrust" => {
-			console::log_1(&"allowTrust Clicked".into());
-			let content = MsgContent::PublicKey(state.public_key());
-			let msg =  ServerMsg::new(&state.addr(), content);
-			send_msg.call1(&JsValue::null(), &msg.toWritable().into());
-		},
+		// "allowTrust" => {
+		// 	console::log_1(&"allowTrust Clicked".into());
+		// 	let content = MsgContent::PublicKey(state.public_key());
+		// 	let msg =  ServerMsg::new(&state.addr(), content);
+		// 	send_msg.call1(&JsValue::null(), &msg.toWritable().into());
+		// },
 		"clickName" =>{
 			console::log_1(&format!("Clicked on user {}", value).into());
 			let content = match state.trust(value.to_string()) {
 				Some(forein) => Some(MsgContent::Trust(forein.clone())),
 				None => None
 			};
-			// let content = match state.person(value.to_string()) {
-			// 	Some(person) => Some(MsgContent::Trust(person.address.clone())),
-			// 	None => None
-			// };
 			if content.is_some() {
 				let msg = ServerMsg::new(&state.addr(), content.unwrap());
 				send_msg.call1(&JsValue::null(), &msg.toWritable().into());
@@ -137,28 +138,29 @@ fn createListener(ele:Element, event_name:&str, property:&str, input_name:&str, 
 	let add_event_result = Function::new_with_args("e", &func_body);
 	ele.add_event_listener_with_callback(event_name, &add_event_result);
 }
-fn display_msg(msg:ServerMsg, state:&Crypto){
-	let dom = get_dom();
-	let display_msg = msg.display(state);
-	console::log_1(&display_msg.clone().into());
-	let func_body = format!("
-		let item = document.createElement('li');
-		item.innerHTML = '{}';
-		item.addEventListener('click', (event) => {{
-			let name = '{}';
-			console.log('name is '+ name);
-			window.rustState = window.rust.handleEvent(window.rustState, window.sendToServer, 'clickName', name);
-			
-			// if(rust.getRelation(state, name) == 'allowedTrust'){{
-			// 	state = rust.handleTrust(state, name);
-			// 	sendToServer(rust.onTrust(state, name));
-			// }}
-		}});
-		document.getElementById('messages').prepend(item);
-		window.scrollTo(0, document.body.scrollHeight);
-	", display_msg, msg.from.name);
-	let display_func = Function::new_no_args(&func_body);
-	display_func.call0(&JsValue::null());
+fn display_msg(msg:&ServerMsg, state:&Crypto){
+	if let Some(display_msg) = msg.display(state){
+		let dom = get_dom();
+		console::log_1(&display_msg.clone().into());
+		let func_body = format!("
+			let item = document.createElement('li');
+			item.innerHTML = '{}';
+			item.addEventListener('click', (event) => {{
+				let name = '{}';
+				console.log('name is '+ name);
+				window.rustState = window.rust.handleEvent(window.rustState, window.sendToServer, 'clickName', name);
+				
+				// if(rust.getRelation(state, name) == 'allowedTrust'){{
+				// 	state = rust.handleTrust(state, name);
+				// 	sendToServer(rust.onTrust(state, name));
+				// }}
+			}});
+			document.getElementById('messages').prepend(item);
+			window.scrollTo(0, document.body.scrollHeight);
+		", display_msg, msg.from.name);
+		let display_func = Function::new_no_args(&func_body);
+		display_func.call0(&JsValue::null());
+	}
 }
 
 /*
