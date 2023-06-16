@@ -7,7 +7,7 @@
     "build": "npm run build-wasm && npm run build-js && npm run build-html && npm run build-css",
     "build-wasm": "wasm-pack build --target web && npm run build-wasm-copy",
     "build-wasm-copy": "cp -r ./pkg/yakking_yak.js ./public/bin/yakking_yak.js && cp -r ./pkg/yakking_yak_bg.wasm ./public/bin/yakking_yak_bg.wasm",
-    "build-html": "npx pug ./src/pug -o ./public",
+    "build-html": "npx pug-cli ./src/pug -o ./public",
     "build-js": "npx browserify src/js/start.js -o public/bin/main.js",
     "build-css": "cp -r ./src/css/style.css ./public/bin/style.css"
   },
@@ -23,13 +23,13 @@
   "homepage": "https://github.com/BoisterousCoder/RustyChat#readme",
   "dependencies": {
     "express": "^4.18.1",
+    "pug-cli": "^1.0.0-alpha6",
     "socket.io": "^4.5.2",
     "socket.io-client": "^4.5.2"
   },
   "devDependencies": {
     "browserify": "^17.0.0",
-    "browserify-shim": "^3.8.15",
-    "pug": "^3.0.2"
+    "browserify-shim": "^3.8.15"
   },
   "browserify": {
     "transform": [

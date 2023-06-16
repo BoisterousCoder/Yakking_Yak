@@ -15,7 +15,7 @@ pub enum SecretKey {
 	Ephemeral(EphemeralSecret)
 }
 pub struct KeyBundle{
-	pub publicKey: PublicKey,
+	pub public_key: PublicKey,
 	pub secret: SecretKey,
 	pub address: Address
 }
@@ -26,7 +26,7 @@ impl KeyBundle{
 		let secret = EphemeralSecret::new(rng);
 		console::log_1(&"Creating Public Key..".into());
 		return KeyBundle{
-			publicKey: PublicKey::from(&secret),
+			public_key: PublicKey::from(&secret),
 			secret: SecretKey::Ephemeral(secret),
 			address: addr
 		};
@@ -38,7 +38,7 @@ impl Serialize for KeyBundle {
 	{
 		let mut state = serializer.serialize_struct("KeyBundle", 3)?;
 		
-		state.serialize_field("public", &self.publicKey.as_bytes())?;
+		state.serialize_field("public", &self.public_key.as_bytes())?;
 		match &self.secret {
 			SecretKey::Ephemeral(secret) => state.serialize_field("ephemeral", secret.as_bytes()),
 			SecretKey::Shared(secret) => state.serialize_field("shared", secret.as_bytes()),
@@ -64,7 +64,7 @@ impl<'de> Deserialize<'de> for KeyBundle {
 					type Value = Field;
 
 					fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-						formatter.write_str("`publicKey`, `shared`, `ephemeral` or `address`")
+						formatter.write_str("`public_key`, `shared`, `ephemeral` or `address`")
 					}
 
 					fn visit_str<E>(self, value: &str) -> Result<Field, E>
@@ -98,7 +98,7 @@ impl<'de> Deserialize<'de> for KeyBundle {
 			// where
 			//     V: SeqAccess<'de>,
 			// {
-			//     let publicKey = seq.next_element()?
+			//     let public_key = seq.next_element()?
 			//         .ok_or_else(|| de::Error::invalid_length(0, &self))?;
 			//     let secretKey = seq.next_element()?
 			//         .ok_or_else(|| de::Error::invalid_length(1, &self))?;
@@ -160,7 +160,7 @@ impl<'de> Deserialize<'de> for KeyBundle {
 				//console::log_1(&"Finished Rebuilding Keyset".into());
 
 				Ok(KeyBundle{
-					publicKey:public, 
+					public_key:public, 
 					secret:secret, 
 					address:addr
 				})

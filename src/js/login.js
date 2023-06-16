@@ -3,8 +3,8 @@ const wn = require('webnative');
 
 module.exports= function onLogin(after){
     if(disableLoggin){
-        let rand = Math.ceil(Math.random()*1000);
-        after({username:"TestUser"+rand});
+        let rand = (Math.ceil(Math.random()*65535)).toString(16);
+        after({username:"Anon-"+rand});
     }else{
         wn.initialise({
             permissions:{

@@ -1,5 +1,4 @@
 use crate::encrypter::Crypto;
-//use crate::log;
 use crate::utils::{decodeBase64, Address, splitAndClean};
 use std::str;
 use std::convert::TryInto;
@@ -33,7 +32,7 @@ impl ServerMsg{
 	pub fn new(from:&Address, content:MsgContent) -> ServerMsg{
 		return ServerMsg{
 			from: from.clone(),
-			content: content
+			content
 		}
 	}
 	pub fn fromServer(txt:&str) -> ServerMsg{
@@ -43,7 +42,7 @@ impl ServerMsg{
 		let addrSegments: Vec<&str> = splitAndClean(segments[0], '@');
 		let contentData = decodeBase64(segments[2]);
 		let name = decodeBase64(addrSegments[0]);
-		let deviceId = addrSegments[1].parse().unwrap();
+		let device_id = addrSegments[1].parse().unwrap();
 		let content = match segments[1] {
 			INSECURE_LABEL => MsgContent::InsecureText(contentData),
 			SECURE_LABEL => MsgContent::SecureText(contentData),
@@ -55,13 +54,13 @@ impl ServerMsg{
 			&_ => MsgContent::Blank()
 		};
 		return ServerMsg{
-			from: Address::new(&name, deviceId), 
-			content: content
+			from: Address::new(&name, device_id), 
+			content
 		}
 	}
 	pub fn toString(&self) -> String{
 		let (kind, body):(&str, String) = match &self.content {
-			MsgContent::PublicKey(publicKey) => (PUBLIC_KEY_LABEL, publicKey.to_string()),
+			MsgContent::PublicKey(public_key) => (PUBLIC_KEY_LABEL, public_key.to_string()),
 			MsgContent::SecureText(text) => (SECURE_LABEL, text.to_string()),
 			MsgContent::InsecureText(txt) => (INSECURE_LABEL, txt.to_string()),
 			MsgContent::Join(group) => (JOIN_LABEL, group.to_string()),
@@ -81,8 +80,7 @@ impl ServerMsg{
 			MsgContent::Trust(addr) => (format!("is trusting {}", addr.name), TRUST_LABEL),
 			MsgContent::Blank() => ("Error Parsing Text".to_string(), BLANK_LABEL)
 		};
-		let relation = state.relation((&self.from.name).to_string());
-		//TODO: add 
+		let relation = state.relation(&self.from);
 		return format!("<span class=\"{}\">*{}*\\{}</span> {}", relation, self.from.name, label, content.replace("\r", ""));
 	}
 	pub fn toWritable(self) -> String {
@@ -91,7 +89,7 @@ impl ServerMsg{
 	pub fn handleSelf(&self, state:&mut Crypto){
 		if self.from != state.addr(){
 			if let MsgContent::PublicKey(data) = &self.content {
-				state.addPublicKey(self.from.clone(), decodeToPublicKeyBytes(data.clone()));
+				state.add_public_key(self.from.clone(), decodeToPublicKeyBytes(data.clone()));
 			}
 		}
 	}
