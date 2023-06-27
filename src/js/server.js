@@ -18,6 +18,7 @@ io.on('connection', (socket) => {
 	for (let msgType of msgsTypesToRepeat) {
 		socket.on(msgType, (msg) => {
 			if(room && cleanMsg(msg)[1] == msgType) {
+				msg += Date.now() + "*"
 				console.log("user sent msg " + msg + " to room "+room);
 				io.to(room).emit(msgType, msg);
 			}
@@ -30,7 +31,7 @@ io.on('connection', (socket) => {
 			room = parts[2];
 			console.log("user joined room " +room);
 			socket.join(room);
-			io.to(room).emit('j', msg);
+			io.to(room).emit('j', msg + Date.now() + "*");
 		}
 	});
 });

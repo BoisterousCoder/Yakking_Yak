@@ -94,19 +94,6 @@ impl<'de> Deserialize<'de> for KeyBundle {
 				formatter.write_str("struct KeyBundle")
 			}
 
-			// fn visit_seq<V>(self, mut seq: V) -> Result<, V::Error>
-			// where
-			//     V: SeqAccess<'de>,
-			// {
-			//     let public_key = seq.next_element()?
-			//         .ok_or_else(|| de::Error::invalid_length(0, &self))?;
-			//     let secretKey = seq.next_element()?
-			//         .ok_or_else(|| de::Error::invalid_length(1, &self))?;
-			//     let addr = seq.next_element()?
-			//         .ok_or_else(|| de::Error::invalid_length(1, &self))?;
-			//     Ok(Duration::new(secs, nanos))
-			// }
-
 			fn visit_map<V>(self, mut map: V) -> Result<KeyBundle, V::Error>
 			where
 				V: MapAccess<'de>,

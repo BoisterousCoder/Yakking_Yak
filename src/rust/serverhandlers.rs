@@ -1,5 +1,5 @@
-use crate::encrypter::Crypto;
-use crate::utils::{decodeBase64, Address, splitAndClean};
+use crate::store::Crypto;
+use crate::utils::{decodeBase64, Address, split_and_clean, log};
 use std::str;
 use std::convert::TryInto;
 use base64;
@@ -23,23 +23,32 @@ pub enum MsgContent{
 	Blank()
 }
 
+pub struct SecureMsgIdentifier {
+	pub msg_id:usize,
+	pub public_key:[u8; 32],
+	pub is_from_self:bool
+}
+
 #[derive(Clone, Debug)]
 pub struct ServerMsg{
 	pub from:Address,
-	pub content:MsgContent
+	pub content:MsgContent,
+	pub time_stamp:u128
 }
+
 impl ServerMsg{
 	pub fn new(from:&Address, content:MsgContent) -> ServerMsg{
 		return ServerMsg{
 			from: from.clone(),
-			content
+			content,
+			time_stamp:0 as u128
 		}
 	}
 	pub fn fromServer(txt:&str) -> ServerMsg{
 		//let txt = str::from_utf8(data).unwrap();
 		//println!("{}", txt); //Uncomment if you want to see raw data
-		let segments: Vec<&str> = splitAndClean(txt, '*');
-		let addrSegments: Vec<&str> = splitAndClean(segments[0], '@');
+		let segments: Vec<&str> = split_and_clean(txt, '*');
+		let addrSegments: Vec<&str> = split_and_clean(segments[0], '@');
 		let contentData = decodeBase64(segments[2]);
 		let name = decodeBase64(addrSegments[0]);
 		let device_id = addrSegments[1].parse().unwrap();
@@ -55,7 +64,8 @@ impl ServerMsg{
 		};
 		return ServerMsg{
 			from: Address::new(&name, device_id), 
-			content
+			content,
+			time_stamp: segments[3].parse::<u128>().expect("timestamp is invalid")
 		}
 	}
 	pub fn toString(&self) -> String{
@@ -70,10 +80,11 @@ impl ServerMsg{
 		};
 		return format!("*{}*{}*{}*", self.from.asSendable(), kind, base64::encode(body.as_bytes()))
 	}
-	pub fn display(&self, state:&Crypto) -> Option<String>{
+	//TODO: fix this so this isn't mutable
+	pub fn display(&self, state:&mut Crypto) -> Option<String>{
 		let msg_data = match &self.content {
 			MsgContent::PublicKey(pub_key) => {
-				if state.person_from_pub_key(pub_key).is_some() {
+				if state.agent_from_pub_key(pub_key).is_some() {
 					None
 				}else if self.from != state.get_address(){
 					Some(("is alllowing people to trust them".to_string(), PUBLIC_KEY_LABEL))
@@ -110,7 +121,7 @@ impl ServerMsg{
 		self.toString()
 	}
 	pub fn handleSelf(&self, state:&mut Crypto){
-		if self.from != state.addr(){
+		if self.from != state.get_address(){
 			if let MsgContent::PublicKey(data) = &self.content {
 				state.add_public_key(self.from.clone(), decodeToPublicKeyBytes(data.clone()));
 			}
