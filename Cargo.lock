@@ -1204,6 +1204,7 @@ dependencies = [
  "aes-gcm",
  "base64",
  "getrandom 0.2.10",
+ "gtk4",
  "hkdf",
  "js-sys",
  "libadwaita",
