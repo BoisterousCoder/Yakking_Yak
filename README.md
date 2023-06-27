@@ -13,6 +13,10 @@ This app depends on the Rust programming language, rust web assembly compiler ta
 
 It uses port 4000 to communicate with the server, so it will have to be opened locally.
 
+## Required Libraries for building
+Web: (Wasm Pack)[https://rustwasm.github.io/wasm-pack/]
+Local: (Libadwaita)[https://gtk-rs.org/gtk4-rs/stable/latest/book/libadwaita.html#libadwaita]
+
 ### To build:
   
 Clone this repository

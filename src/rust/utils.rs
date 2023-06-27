@@ -34,5 +34,8 @@ pub fn split_and_clean(text:&str, split:char) -> Vec<&str>{
 		.collect()
 }
 pub fn log(text:&str){
+	#[cfg(target_arch = "wasm32")]
 	console::log_1(&text.to_string().into());
+	#[cfg(not(target_arch = "wasm32"))]
+	println!(text);
 }
