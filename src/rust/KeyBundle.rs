@@ -3,7 +3,8 @@ use serde::{
 	ser::{Serialize, Serializer, SerializeStruct}, 
 	de::{self, Deserialize, Deserializer, Visitor, MapAccess}
 };
-use web_sys::console;
+// use web_sys::console;
+use crate::utils::log;
 use x25519_dalek::{EphemeralSecret, PublicKey, SharedSecret};
 use rand_chacha::{ChaCha20Rng, rand_core::SeedableRng};
 
@@ -21,10 +22,10 @@ pub struct KeyBundle{
 }
 impl KeyBundle{
 	pub fn newSelfKeySet(addr:Address, randNum:u64) -> KeyBundle{
-		console::log_1(&"Creating Ephemeral Key..".into());
+		log("Creating Ephemeral Key..");
 		let rng = ChaCha20Rng::seed_from_u64(randNum);
 		let secret = EphemeralSecret::new(rng);
-		console::log_1(&"Creating Public Key..".into());
+		log("Creating Public Key..");
 		return KeyBundle{
 			public_key: PublicKey::from(&secret),
 			secret: SecretKey::Ephemeral(secret),

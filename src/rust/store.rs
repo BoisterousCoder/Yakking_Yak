@@ -4,7 +4,6 @@ use crate::ForeinAgent::ForeinAgent;
 use std::str;
 use std::collections::HashMap;
 use crate::KeyBundle::{KeyBundle, SecretKey};
-use web_sys::console;
 use x25519_dalek::PublicKey;
 use serde::{Serialize, Deserialize};
 use aes_gcm::{

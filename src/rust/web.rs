@@ -20,7 +20,6 @@ use crate::utils::log;
 
 const RANDOM_NUMBER:u64 = 1234567890; //TODO: fix the seed to its actually random
 const DEVICE_ID:i32 = 12345;//TODO: Make this useful
-const SLEEP_TIME:u64 = 20;
 
 #[wasm_bindgen(start)]
 pub fn startListeners(){

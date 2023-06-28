@@ -1,7 +1,10 @@
+extern crate chrono;
+
 use crate::store::Crypto;
 use crate::utils::{decodeBase64, Address, split_and_clean, log};
 use std::str;
 use std::convert::TryInto;
+use chrono::prelude::*;
 use base64;
 
 const INSECURE_LABEL:&str = "i";
@@ -33,7 +36,7 @@ pub struct SecureMsgIdentifier {
 pub struct ServerMsg{
 	pub from:Address,
 	pub content:MsgContent,
-	pub time_stamp:u128
+	pub time_stamp:i64
 }
 
 impl ServerMsg{
@@ -41,7 +44,7 @@ impl ServerMsg{
 		return ServerMsg{
 			from: from.clone(),
 			content,
-			time_stamp:0 as u128
+			time_stamp:0 as i64
 		}
 	}
 	pub fn fromServer(txt:&str) -> ServerMsg{
@@ -65,7 +68,7 @@ impl ServerMsg{
 		return ServerMsg{
 			from: Address::new(&name, device_id), 
 			content,
-			time_stamp: segments[3].parse::<u128>().expect("timestamp is invalid")
+			time_stamp: segments[3].parse::<i64>().expect("timestamp is invalid")
 		}
 	}
 	pub fn toString(&self) -> String{
@@ -108,14 +111,25 @@ impl ServerMsg{
 			},
 			MsgContent::Blank() => Some(("Error Parsing Text".to_string(), BLANK_LABEL))
 		};
+		let native_time = NaiveDateTime::from_timestamp_millis(self.time_stamp).expect("Invalid Timestap for message!");
+		let date_time = native_time.format("%Y-%m-%d %H:%M:%S");
+
+		#[cfg(target_arch = "wasm32")]
 		return match msg_data {
 			Some((content, label)) => {
 				let relation = state.relation(&self.from);
 				Some(format!("<span class=\"{}\">({}) {}</span> {}", relation, label, self.from.name, content.replace("\r", "")))
 			},
 			None => None
-		}
-		
+		};
+		#[cfg(not(target_arch = "wasm32"))]
+		return match msg_data {
+			Some((content, label)) => {
+				let relation = state.relation(&self.from);
+				Some(format!("({}) {} at {}\r{}\r{}", label, self.from.name, date_time, content.replace("\r", ""), relation))
+			},
+			None => None
+		};
 	}
 	pub fn toWritable(self) -> String {
 		self.toString()

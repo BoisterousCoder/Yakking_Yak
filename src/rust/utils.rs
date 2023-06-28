@@ -1,6 +1,8 @@
 use std::str;
 use base64;
 use serde::{Deserialize, Serialize};
+
+#[cfg(target_arch = "wasm32")]
 use web_sys::console;
 
 pub fn decodeBase64(inTxt:&str) -> String{
@@ -37,5 +39,5 @@ pub fn log(text:&str){
 	#[cfg(target_arch = "wasm32")]
 	console::log_1(&text.to_string().into());
 	#[cfg(not(target_arch = "wasm32"))]
-	println!(text);
+	println!("Logged: {}", text);
 }
