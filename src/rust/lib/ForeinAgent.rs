@@ -1,6 +1,6 @@
 use serde::{Serialize, Deserialize};
-use crate::KeyBundle::KeyBundle;
-use crate::ratchet::Ratchet;
+use crate::lib::KeyBundle::KeyBundle;
+use crate::lib::ratchet::Ratchet;
 
 #[derive(Serialize, Deserialize)]
 pub struct ForeinAgent {

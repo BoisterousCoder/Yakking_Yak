@@ -1,15 +1,10 @@
-use crate::utils::{Address, split_and_clean, log};
-use crate::ratchet::Ratchet;
-use crate::ForeinAgent::ForeinAgent;
+use crate::lib::utils::{Address, split_and_clean, log};
+use crate::lib::ratchet::Ratchet;
+use crate::lib::ForeinAgent::ForeinAgent;
 use std::str;
-use std::collections::HashMap;
-use crate::KeyBundle::{KeyBundle, SecretKey};
+use crate::lib::KeyBundle::{KeyBundle, SecretKey};
 use x25519_dalek::PublicKey;
 use serde::{Serialize, Deserialize};
-use aes_gcm::{
-    aead::{Aead, KeyInit},
-    Aes256Gcm, Nonce
-};
 
 const SALT_STRING:&str = "This is a temporary salt until I figure out what to put here";
 

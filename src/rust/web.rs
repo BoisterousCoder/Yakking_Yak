@@ -7,16 +7,11 @@ use wasm_bindgen::{prelude::*, JsValue};
 use js_sys::{Function, Array};
 use std::{thread, format};
 
-mod utils;
-mod store;
-mod ratchet;
-mod serverhandlers;
-mod KeyBundle;
-mod ForeinAgent;
+mod lib;
 
-use crate::store::Crypto;
-use crate::serverhandlers::{ServerMsg, MsgContent};
-use crate::utils::log;
+use crate::lib::store::Crypto;
+use crate::lib::serverhandlers::{ServerMsg, MsgContent};
+use crate::lib::utils::log;
 
 const RANDOM_NUMBER:u64 = 1234567890; //TODO: fix the seed to its actually random
 const DEVICE_ID:i32 = 12345;//TODO: Make this useful

@@ -1,12 +1,15 @@
+
 use std::str;
 use base64;
 use serde::{Deserialize, Serialize};
 
+
 #[cfg(target_arch = "wasm32")]
 use web_sys::console;
 
-pub fn decodeBase64(inTxt:&str) -> String{
-	return str::from_utf8(base64::decode(inTxt).unwrap().as_slice()).unwrap().to_string()
+pub fn decodeBase64(text:&str) -> String{
+	log(&format!("Decoding base64 ({})", text));
+	return str::from_utf8(base64::decode(text).unwrap().as_slice()).unwrap().to_string()
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Debug)]

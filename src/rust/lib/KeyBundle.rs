@@ -4,11 +4,9 @@ use serde::{
 	de::{self, Deserialize, Deserializer, Visitor, MapAccess}
 };
 // use web_sys::console;
-use crate::utils::log;
+use crate::lib::utils::{log, Address};
 use x25519_dalek::{EphemeralSecret, PublicKey, SharedSecret};
 use rand_chacha::{ChaCha20Rng, rand_core::SeedableRng};
-
-use crate::utils::Address;
 
 pub enum SecretKey {
 	Empty(),

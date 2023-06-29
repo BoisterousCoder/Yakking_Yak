@@ -2,13 +2,12 @@ use x25519_dalek::SharedSecret;
 use sha2::Sha256;
 use hkdf::Hkdf;
 use serde::{Serialize, Deserialize};
-use crate::utils::log;
 use aes_gcm::{
     aead::{Aead, KeyInit},
     Aes256Gcm, Nonce
 };
 
-use crate::utils::split_and_clean;
+// use crate::lib::utils::{split_and_clean, log};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Ratchet{
@@ -141,12 +140,12 @@ impl UnusedLink{
     }
     pub fn proccess_payload(&self, is_encrypting:bool, payload:&str) -> HasProccessedLink{
         let res = proccess_payload(&self.aes_key, &self.unique_iv, is_encrypting, payload);
-        return (HasProccessedLink {
+        return HasProccessedLink {
             result: res,
             salt: self.salt.clone(),
             shared_secret: self.shared_secret.clone(),
             secret: self.secret.clone()
-        });
+        };
     }
     pub fn next(&self, new_shared_secret:Option<[u8;32]>) -> (MadeNextLink, UnusedLink) {
         let shared_secret = match new_shared_secret {

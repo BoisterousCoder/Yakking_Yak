@@ -1,7 +1,7 @@
 extern crate chrono;
 
-use crate::store::Crypto;
-use crate::utils::{decodeBase64, Address, split_and_clean, log};
+use crate::lib::store::Crypto;
+use crate::lib::utils::{decodeBase64, Address, split_and_clean, log};
 use std::str;
 use std::convert::TryInto;
 use chrono::prelude::*;
@@ -107,7 +107,11 @@ impl ServerMsg{
 			MsgContent::Leave(_) => Some(("went offline".to_string(), LEAVE_LABEL)),
 			MsgContent::Trust(addr) => {
 				let relation = state.relation(&addr);
-				Some((format!("is trusting <span class=\"{}\">{}</span>", relation, addr.name), TRUST_LABEL))
+				#[cfg(target_arch = "wasm32")]
+				let res = Some((format!("is trusting <span class=\"{}\">{}</span>", relation, addr.name), TRUST_LABEL));
+				#[cfg(not(target_arch = "wasm32"))]
+				let res = Some((format!("{} is trusting {}", self.from.name, addr.name), TRUST_LABEL));
+				res
 			},
 			MsgContent::Blank() => Some(("Error Parsing Text".to_string(), BLANK_LABEL))
 		};
