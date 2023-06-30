@@ -27,9 +27,6 @@ pub fn startListeners(){
 	let group_form = dom.get_element_by_id("groupForm").unwrap();
 	createListener(group_form, "submit", "value", "groupInput", true, false);
 
-	// let allow_trust_button = dom.get_element_by_id("allowTrust").unwrap();
-	// createListener(allow_trust_button, "click", "value", "allowTrust", false, false);
-
 	let is_encrypting_button = dom.get_element_by_id("isEncrypting").unwrap();
 	createListener(is_encrypting_button, "click", "checked", "isEncrypting", false, false);
 }
@@ -55,13 +52,14 @@ pub fn handleEvent(_state:&str, send_msg:Function, event_name:&str, value:&str) 
 	match event_name.split('-').next().unwrap() {
 		"msg" => {
 			log(&format!("Recieved Msg {}", &value) );
-			let msg = ServerMsg::fromServer(value);
-			display_msg(&msg, &mut state);
-			msg.handleSelf(&mut state);
-			if let MsgContent::Join(_) = msg.content {
-				let content_to_send = MsgContent::PublicKey(state.public_key());
-				let msg_to_send = ServerMsg::new(&state.get_address(), content_to_send);
-				send_msg.call1(&JsValue::null(), &msg_to_send.toWritable().into());
+			if let Some(msg) = ServerMsg::from_server(value, &mut state){
+				display_msg(&msg, &state);
+
+				if let MsgContent::Join(_) = msg.content {
+					let content_to_send = MsgContent::PublicKey(state.public_key());
+					let msg_to_send = ServerMsg::new(&state.get_address(), content_to_send);
+					send_msg.call1(&JsValue::null(), &msg_to_send.to_writable(&state).into());
+				}
 			}
 		},
 		"msgInput" => {
@@ -69,19 +67,19 @@ pub fn handleEvent(_state:&str, send_msg:Function, event_name:&str, value:&str) 
 			let content = match state.is_encrypting {
 				true => {
 					log(&value );
-					log(&state.encrypt(value.to_string()) );
+					// log(&state.encrypt(value.to_string()) );
 					MsgContent::SecureText(state.encrypt(value.to_string()))
 				},
 				false => MsgContent::InsecureText(value.to_string())
 			};
 			let msg =  ServerMsg::new(&state.get_address(), content);
-			send_msg.call1(&JsValue::null(), &msg.toWritable().into());
+			send_msg.call1(&JsValue::null(), &msg.to_writable(&state).into());
 		},
 		"groupInput" => {
-			log(&"Group Change" );
+			log("Group Change" );
 			let content = MsgContent::Join(value.to_string());
 			let msg =  ServerMsg::new(&state.get_address(), content);
-			send_msg.call1(&JsValue::null(), &msg.toWritable().into());
+			send_msg.call1(&JsValue::null(), &msg.to_writable(&state).into());
 		},
 		"isEncrypting" => {
 			log(&format!("isEncrypting Changed to {}", value) );
@@ -90,12 +88,6 @@ pub fn handleEvent(_state:&str, send_msg:Function, event_name:&str, value:&str) 
 				_ => false
 			};
 		},
-		// "allowTrust" => {
-		// 	log(&"allowTrust Clicked".into());
-		// 	let content = MsgContent::PublicKey(state.public_key());
-		// 	let msg =  ServerMsg::new(&state.addr(), content);
-		// 	send_msg.call1(&JsValue::null(), &msg.toWritable().into());
-		// },
 		"clickName" =>{
 			log(&format!("Clicked on user {}", value) );
 			let content = match state.trust(value.to_string()) {
@@ -104,7 +96,7 @@ pub fn handleEvent(_state:&str, send_msg:Function, event_name:&str, value:&str) 
 			};
 			if content.is_some() {
 				let msg = ServerMsg::new(&state.get_address(), content.unwrap());
-				send_msg.call1(&JsValue::null(), &msg.toWritable().into());
+				send_msg.call1(&JsValue::null(), &msg.to_writable(&state).into());
 			}
 			log(&serde_json::to_string(&state).unwrap());
 		}
@@ -136,7 +128,7 @@ fn createListener(ele:Element, event_name:&str, property:&str, input_name:&str, 
 	let add_event_result = Function::new_with_args("e", &func_body);
 	ele.add_event_listener_with_callback(event_name, &add_event_result);
 }
-fn display_msg(msg:&ServerMsg, state:&mut Crypto){
+fn display_msg(msg:&ServerMsg, state:&Crypto){
 	if let Some(display_msg) = msg.display(state){
 		log(&display_msg.clone() );
 		let func_body = format!("

@@ -6,6 +6,8 @@ use crate::lib::KeyBundle::{KeyBundle, SecretKey};
 use x25519_dalek::PublicKey;
 use serde::{Serialize, Deserialize};
 
+use super::serverhandlers::SecureMsgIdentifier;
+
 const SALT_STRING:&str = "This is a temporary salt until I figure out what to put here";
 
 #[derive(Serialize, Deserialize)]
@@ -16,9 +18,9 @@ pub struct Crypto{
 	//ratchets: HashMap<[u8; 32], (Ratchet, Ratchet)>
 }
 impl Crypto{
-	pub fn new(name:&str, deviceId:i32, randNum:u64) -> Crypto{
+	pub fn new(name:&str, device_id:i32, rand_num:u64) -> Crypto{
 		return Crypto{
-			self_data: KeyBundle::newSelfKeySet(Address::new(name, deviceId), randNum),
+			self_data: KeyBundle::newSelfKeySet(Address::new(name, device_id), rand_num),
 			agents: vec!(),
 			//ratchets: HashMap::new(),
 			is_encrypting: false
@@ -107,48 +109,62 @@ impl Crypto{
 		}
 		return s;
 	}
-	pub fn encrypt(&mut self, text:String) -> String {
-		let mut encrypted_text:String = "".to_string();
+	pub fn encrypt(&mut self, text:String) -> Vec<SecureMsgIdentifier> {
+		let mut msg_ids = vec![];
 		for agent in &mut self.agents {
 			if let SecretKey::Shared(secret) = &agent.keys.secret{
 				let key = secret.as_bytes();
 				if let Some(ratchet) = &mut agent.to_ratchet{
 					let msg_id = ratchet.len();
-					let payload = ratchet.process_payload(msg_id, &text);
-					encrypted_text += &format!("{}*{}*{};", agent.keys.address.asSendable(), msg_id, payload);
+					let payload_raw = text.as_bytes();
+					msg_ids.push(ratchet.process_payload(&agent.keys.address, msg_id, &payload_raw));
 				}
 			}
 		}
-		// log(&encrypted_text);
-		return encrypted_text;
+		return msg_ids;
 	}
-	pub fn decrypt(&mut self, from:&Address, addressed_msg_data:String) -> String {
+	pub fn decrypt(&mut self, from:&Address, addressed_msg_data:String) -> Option<SecureMsgIdentifier> {
 		let addressed_msgs:Vec<&str> = split_and_clean(&addressed_msg_data, ';');
 		for addressed_msg in addressed_msgs{
 			let addressed_msg_split:Vec<&str> = split_and_clean(addressed_msg, '*');
 			let address = Address::fromSendable(addressed_msg_split[0].to_string());
 			let msg_id = addressed_msg_split[1].parse::<usize>().expect("Message ID is not an unsigned int!");
-			// log(&addressed_msg);
 			if address == self.self_data.address {
 				for agent in &mut self.agents{
 					if &agent.keys.address == from {
 						if let SecretKey::Shared(secret) = &mut agent.keys.secret{
-							let key = secret.as_bytes();
 							if let Some(ratchet) = &mut agent.from_ratchet{
-								return ratchet.process_payload(msg_id, addressed_msg_split[2])
+								let payload = base64::decode(addressed_msg_split[2]).expect("recived invalid base64 data");
+								// let payload_raw = ratchet.process_payload(msg_id, payload.as_slice());
+								// return str::from_utf8(&payload_raw).expect("Invalid utf8 on decrypt").to_string();
+								return Some(ratchet.process_payload(&agent.keys.address, msg_id, payload.as_slice()));
 							}
 						}
-						return "has sent a secure message but you cannot read it as you do not trust them".to_string();
+						return None;
+						//return "has sent a secure message but you cannot read it as you do not trust them".to_string();
 					}
 				}
 			}
 		}
-		"has sent a secure message but does not trust you".to_string()
+		None
 	}
 	pub fn public_key(&self) -> String{
 		return base64::encode(self.self_data.public_key.as_bytes());
 	}
 	pub fn get_address(&self) -> Address{
 		return self.self_data.address.clone();
+	}
+	pub fn get_encrypted_msg(&self, id:&SecureMsgIdentifier) -> Option<Vec<u8>>{
+		for agent in &self.agents {
+			if agent.keys.address.eq(&id.address) {
+				return if id.is_sender {
+					Some(agent.to_ratchet.as_ref().unwrap().get_msg(id.msg_id).expect("message not decryped yet"))
+				}else {
+					return Some(agent.from_ratchet.as_ref().unwrap().get_msg(id.msg_id).expect("message not decryped yet"))
+				};
+			}
+		}
+		log("Could not find ratchet source!");
+		None
 	}
 }

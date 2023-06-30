@@ -37,14 +37,13 @@ lazy_static! {
         let user_name = format!("Anon{:X}", user_number);
         Mutex::new(Crypto::new(&user_name, DEVICE_ID, RANDOM_NUMBER))
     };
-    pub static ref MSG_QUEUE:SegQueue::<ServerMsg> = SegQueue::new();
+    pub static ref MSG_QUEUE:SegQueue::<String> = SegQueue::new();
     pub static ref SOCKET_CLIENT:Arc<Client> = {
         let on_msg = move |payload_wrapped, _| {
             if let Payload::String(payload) = payload_wrapped {
                 log(&format!("Recieved Msg {}", &payload));
                 let payload_fixed = payload.replace("\"", "");
-                let msg = ServerMsg::fromServer(&payload_fixed);
-                MSG_QUEUE.push(msg);
+                MSG_QUEUE.push(payload_fixed);
             };
         };
     
@@ -80,11 +79,6 @@ fn build_ui(app: &adw::Application){
     .selection_mode(SelectionMode::None)
     .css_classes(vec![String::from("boxed-list")])
     .build();
-
-    
-    //timeout_add_local(SLEEP_DURATION)
-    // let mut socket = SOCKET_CLIENT.lock().unwrap();
-    // *socket = Some(get_socket().expect("Unable to connect to server!"));
 
     let content = Box::new(Orientation::Vertical, 0);
     content.append(&HeaderBar::new());
@@ -199,17 +193,18 @@ fn build_ui(app: &adw::Application){
     window.show();
 
     timeout_add_local( Duration::from_millis(SLEEP_DURATION), move || {
-        // log("checking msg queue");
-        while let Some(msg) = MSG_QUEUE.pop() {
+        while let Some(txt) = MSG_QUEUE.pop() {
             log("handing msg");
             let state = &mut STATE.lock().expect("unable to aquire state");
-            display_msg(&msg_list, msg.clone(), state);
-            msg.handleSelf(state);
 
-            if let MsgContent::Join(_) = msg.content {
-            	let content_to_send = MsgContent::PublicKey(state.public_key());
-            	let msg_to_send = ServerMsg::new(&state.get_address(), content_to_send);
-                SOCKET_CLIENT.emit("p", msg_to_send.toString()).expect("unable to send primary keys");
+            if let Some(msg) = ServerMsg::from_server(&txt, state){
+                display_msg(&msg_list, msg.clone(), state);
+
+                if let MsgContent::Join(_) = msg.content {
+                    let content_to_send = MsgContent::PublicKey(state.public_key());
+                    let msg_to_send = ServerMsg::new(&state.get_address(), content_to_send);
+                    SOCKET_CLIENT.emit("p", msg_to_send.to_string(&state)).expect("unable to send primary keys");
+                }
             }
         };
         return glib::source::Continue(true);
@@ -221,7 +216,7 @@ fn on_join_group(group_entry:&Entry){
     log("Group Change");
     let content = MsgContent::Join(group_entry.buffer().text().to_string());
     let msg =  ServerMsg::new(&state.get_address(), content);
-    SOCKET_CLIENT.emit("j", msg.toString()).expect("failed to send join message");
+    SOCKET_CLIENT.emit("j", msg.to_string(&state)).expect("failed to send join message");
 
     //TODO: Drop all previous messages
 }
@@ -243,7 +238,7 @@ fn on_send_msg(msg_entry:&Entry){
     };
     let msg = ServerMsg::new(&state.get_address(), content);
 
-    SOCKET_CLIENT.emit(label, msg.toString()).expect("failed to send join message");
+    SOCKET_CLIENT.emit(label, msg.to_string(&state)).expect("failed to send join message");
     msg_entry.buffer().set_text("");
 }
 fn display_msg(list:&ListBox, msg:ServerMsg, state:&mut Crypto){
@@ -276,7 +271,7 @@ fn on_msg_click(from:&Address){
         };
         if content.is_some() {
             let msg = ServerMsg::new(&state.get_address(), content.unwrap());
-            SOCKET_CLIENT.emit("t",msg.toWritable()).expect("failed to send join message");
+            SOCKET_CLIENT.emit("t",msg.to_writable(&state)).expect("failed to send join message");
         }
     }else{
         log(&format!("Can't trust {} because you already trust them, you dont have their primary key, or it's you. Can't trust yourself after all.", from.name))

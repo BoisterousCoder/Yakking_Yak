@@ -7,6 +7,8 @@ use aes_gcm::{
     Aes256Gcm, Nonce
 };
 
+use super::{utils::{log, Address}, serverhandlers::SecureMsgIdentifier};
+
 // use crate::lib::utils::{split_and_clean, log};
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -24,22 +26,24 @@ impl Ratchet{
         ratchet.secret_chain.push(PayloadHandler::Unused(handler));
         return ratchet;
     }
-    pub fn process_payload(&mut self, id:usize, payload:&str) -> String{
+    pub fn process_payload(&mut self, addr:&Address, id:usize, payload:&[u8]) -> SecureMsgIdentifier{
         self.gen_handlers_to(id);
-        return match &self.secret_chain[id] {
+        match &self.secret_chain[id] {
             PayloadHandler::Unused(handler) => {
-                let remaining_handler = handler.proccess_payload(self.is_encrypting, &payload);
-                let res = remaining_handler.result.to_string();
+                let remaining_handler = handler.proccess_payload(self.is_encrypting, payload);
+                // let res = remaining_handler.result.clone();
                 self.secret_chain[id] = PayloadHandler::HasProccessed(remaining_handler);
-                res
             }
             PayloadHandler::MadeNext(handler) => {
-                let res = handler.proccess_payload(self.is_encrypting, &payload).to_string();
+                let res = handler.proccess_payload(self.is_encrypting, payload);
                 self.secret_chain[id] = PayloadHandler::Used(res.clone());
-                res
             }
-            PayloadHandler::HasProccessed(handler) => handler.result.clone(),
-            PayloadHandler::Used(res) => res.to_string()
+            _ => ()
+        };
+        return SecureMsgIdentifier{
+            is_sender: self.is_encrypting,
+            address: addr.clone(),
+            msg_id:id
         };
     }
     pub fn set_new_shared_key(&mut self, start_id:usize, shared_secret:[u8;32]) -> Result<(), String>{
@@ -78,7 +82,7 @@ impl Ratchet{
             }
         }
     }
-    pub fn get(&self, id:usize) -> Option<String> {
+    pub fn get_msg(&self, id:usize) -> Option<Vec<u8>> {
         return match &self.secret_chain[id] {
             PayloadHandler::HasProccessed(handler) => Some(handler.result.clone()),
             PayloadHandler::Used(res) => Some(res.clone()),
@@ -95,7 +99,7 @@ enum PayloadHandler{
     Unused(UnusedLink),
     MadeNext(MadeNextLink),
     HasProccessed(HasProccessedLink),
-    Used(String)
+    Used(Vec<u8>)
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -138,7 +142,7 @@ impl UnusedLink{
             shared_secret
         };
     }
-    pub fn proccess_payload(&self, is_encrypting:bool, payload:&str) -> HasProccessedLink{
+    pub fn proccess_payload(&self, is_encrypting:bool, payload:&[u8]) -> HasProccessedLink{
         let res = proccess_payload(&self.aes_key, &self.unique_iv, is_encrypting, payload);
         return HasProccessedLink {
             result: res,
@@ -165,14 +169,14 @@ struct MadeNextLink{
     unique_iv:[u8; 12]
 }
 impl MadeNextLink{
-    pub fn proccess_payload(&self, is_encrypting:bool, payload:&str) -> String{
+    pub fn proccess_payload(&self, is_encrypting:bool, payload:&[u8]) -> Vec<u8>{
         return proccess_payload(&self.aes_key, &self.unique_iv, is_encrypting, payload);
     }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 struct HasProccessedLink{
-    pub result:String,
+    pub result:Vec<u8>,
     salt:Vec<u8>,
     shared_secret:[u8; 32],
     secret:[u8; 32]
@@ -187,14 +191,18 @@ impl HasProccessedLink{
     }
 }
 
-fn proccess_payload(aes_key:&[u8; 32], unique_iv:&[u8;12], is_encrypting:bool, payload:&str) -> String {
+fn proccess_payload(aes_key:&[u8; 32], unique_iv:&[u8;12], is_encrypting:bool, payload:&[u8]) -> Vec<u8> {
+    log(&format!("Proccessing Payload:\n is_encrypting:{},\n aes_key:{},\n unique_iv:{},\n payload:{}\n",
+        is_encrypting,
+        base64::encode(aes_key),
+        base64::encode(unique_iv),
+        base64::encode(payload)
+    )); 
     let cipher = Aes256Gcm::new_from_slice(aes_key).expect("aes_key is 32bytes long");
     let nonce = Nonce::from_slice(unique_iv);
-    let payload_bytes = base64::decode(payload).expect("incorrect base64 data for decryption");
     return if is_encrypting {
-        base64::encode(cipher.encrypt(nonce, payload_bytes.as_ref()).expect("failed to encrypt"))
+        cipher.encrypt(nonce, payload).expect("failed to encrypt")
     } else {
-        let result_bytes = cipher.decrypt(nonce, payload_bytes.as_ref()).unwrap();
-        std::str::from_utf8(&result_bytes).expect("malformed string on decrypt").to_string()
+        cipher.decrypt(nonce, payload).unwrap()
     };
 }

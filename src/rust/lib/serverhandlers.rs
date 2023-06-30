@@ -4,8 +4,8 @@ use crate::lib::store::Crypto;
 use crate::lib::utils::{decodeBase64, Address, split_and_clean, log};
 use std::str;
 use std::convert::TryInto;
-use chrono::prelude::*;
 use base64;
+use chrono::{NaiveDateTime, Local};
 
 const INSECURE_LABEL:&str = "i";
 const SECURE_LABEL:&str = "s";
@@ -15,10 +15,10 @@ const PUBLIC_KEY_LABEL:&str = "p";
 const TRUST_LABEL:&str = "t";
 const BLANK_LABEL:&str = "_";
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum MsgContent{
 	InsecureText(String),
-	SecureText(String),
+	SecureText(Vec<SecureMsgIdentifier>),
 	Join(String),
 	PublicKey(String),
 	Leave(String),
@@ -26,13 +26,14 @@ pub enum MsgContent{
 	Blank()
 }
 
+#[derive(Clone)]
 pub struct SecureMsgIdentifier {
 	pub msg_id:usize,
-	pub public_key:[u8; 32],
-	pub is_from_self:bool
+	pub address:Address,
+	pub is_sender:bool
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct ServerMsg{
 	pub from:Address,
 	pub content:MsgContent,
@@ -41,40 +42,72 @@ pub struct ServerMsg{
 
 impl ServerMsg{
 	pub fn new(from:&Address, content:MsgContent) -> ServerMsg{
+		let time_stamp = Local::now().timestamp_millis();
 		return ServerMsg{
 			from: from.clone(),
 			content,
-			time_stamp:0 as i64
+			time_stamp
 		}
 	}
-	pub fn fromServer(txt:&str) -> ServerMsg{
-		//let txt = str::from_utf8(data).unwrap();
-		//println!("{}", txt); //Uncomment if you want to see raw data
+	pub fn from_server(txt:&str, state:&mut Crypto) -> Option<ServerMsg>{
 		let segments: Vec<&str> = split_and_clean(txt, '*');
-		let addrSegments: Vec<&str> = split_and_clean(segments[0], '@');
-		let contentData = decodeBase64(segments[2]);
-		let name = decodeBase64(addrSegments[0]);
-		let device_id = addrSegments[1].parse().unwrap();
+		if segments.len() < 4 {
+			return None;
+		}
+		let addr_segments: Vec<&str> = split_and_clean(segments[0], '@');
+		let content_data = decodeBase64(segments[2]);
+
+		let name = decodeBase64(addr_segments[0]);
+		let device_id = addr_segments[1].parse().unwrap();
+		let from = Address::new(&name, device_id);
+
 		let content = match segments[1] {
-			INSECURE_LABEL => MsgContent::InsecureText(contentData),
-			SECURE_LABEL => MsgContent::SecureText(contentData),
-			JOIN_LABEL => MsgContent::Join(contentData),
-			PUBLIC_KEY_LABEL => MsgContent::PublicKey(contentData),
-			TRUST_LABEL => MsgContent::Trust(Address::fromSendable(contentData)),
-			LEAVE_LABEL => MsgContent::Leave(contentData),
+			INSECURE_LABEL => MsgContent::InsecureText(content_data),
+			SECURE_LABEL => {
+				if let Some(secure_msg) = state.decrypt(&from, content_data){
+					MsgContent::SecureText(vec![secure_msg])
+				}else{
+					return None
+				}
+			},
+			JOIN_LABEL => MsgContent::Join(content_data),
+			PUBLIC_KEY_LABEL => {
+				if from != state.get_address(){
+					state.add_public_key(from.clone(), decode_to_public_key_bytes(content_data.clone()));
+				}
+				MsgContent::PublicKey(content_data)
+			},
+			TRUST_LABEL => MsgContent::Trust(Address::fromSendable(content_data)),
+			LEAVE_LABEL => MsgContent::Leave(content_data),
 			BLANK_LABEL => MsgContent::Blank(),
 			&_ => MsgContent::Blank()
 		};
-		return ServerMsg{
-			from: Address::new(&name, device_id), 
+
+		
+
+		return Some(ServerMsg{
+			from: from, 
 			content,
 			time_stamp: segments[3].parse::<i64>().expect("timestamp is invalid")
-		}
+		})
 	}
-	pub fn toString(&self) -> String{
+	pub fn to_string(&self, state:&Crypto) -> String{
 		let (kind, body):(&str, String) = match &self.content {
 			MsgContent::PublicKey(public_key) => (PUBLIC_KEY_LABEL, public_key.to_string()),
-			MsgContent::SecureText(text) => (SECURE_LABEL, text.to_string()),
+			MsgContent::SecureText(ids) => {
+				let mut encrypted_text:String = "".to_string();
+				for id in ids {
+					if let Some(payload) = state.get_encrypted_msg(id) {
+						encrypted_text += &format!("{}*{}*{};", 
+							id.address.asSendable(), 
+							id.msg_id, 
+							base64::encode(payload)
+						);
+					}
+				}
+				
+				(SECURE_LABEL, encrypted_text.to_string())
+			},
 			MsgContent::InsecureText(txt) => (INSECURE_LABEL, txt.to_string()),
 			MsgContent::Join(group) => (JOIN_LABEL, group.to_string()),
 			MsgContent::Leave(group) => (LEAVE_LABEL, group.to_string()),
@@ -83,8 +116,7 @@ impl ServerMsg{
 		};
 		return format!("*{}*{}*{}*", self.from.asSendable(), kind, base64::encode(body.as_bytes()))
 	}
-	//TODO: fix this so this isn't mutable
-	pub fn display(&self, state:&mut Crypto) -> Option<String>{
+	pub fn display(&self, state:&Crypto) -> Option<String>{
 		let msg_data = match &self.content {
 			MsgContent::PublicKey(pub_key) => {
 				if state.agent_from_pub_key(pub_key).is_some() {
@@ -95,11 +127,16 @@ impl ServerMsg{
 					None
 				}
 			},
-			MsgContent::SecureText(txt) => {
+			MsgContent::SecureText(id) => {
 				if self.from == state.get_address() {
 					None
 				}else {
-					Some((state.decrypt(&self.from, txt.to_string()), SECURE_LABEL))
+					// Some((state.decrypt(&self.from, txt.to_string()), SECURE_LABEL))
+					if let Some(payload) = state.get_encrypted_msg(id.first().unwrap()){
+						Some((str::from_utf8(payload.as_slice()).expect("Invalid utf8 on decrypt").to_string(), SECURE_LABEL))
+					}else{
+						Some(("has sent a secure message but you cannot read it as you do not trust them".to_string(), SECURE_LABEL))
+					}
 				}
 			},
 			MsgContent::InsecureText(txt) => Some((txt.to_string(), INSECURE_LABEL)),
@@ -135,19 +172,12 @@ impl ServerMsg{
 			None => None
 		};
 	}
-	pub fn toWritable(self) -> String {
-		self.toString()
-	}
-	pub fn handleSelf(&self, state:&mut Crypto){
-		if self.from != state.get_address(){
-			if let MsgContent::PublicKey(data) = &self.content {
-				state.add_public_key(self.from.clone(), decodeToPublicKeyBytes(data.clone()));
-			}
-		}
+	pub fn to_writable(self, state:&Crypto) -> String {
+		self.to_string(state)
 	}
 }
 
-fn decodeToPublicKeyBytes(s:String) -> [u8; 32]{
+fn decode_to_public_key_bytes(s:String) -> [u8; 32]{
 	let data = base64::decode(s).unwrap();
 	let slice = data.as_slice();
 	return match slice.try_into() {
