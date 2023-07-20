@@ -6,6 +6,7 @@ use std::str;
 use std::convert::TryInto;
 use base64;
 use chrono::{NaiveDateTime, Local};
+use serde::{Deserialize, Serialize};
 
 const INSECURE_LABEL:&str = "i";
 const SECURE_LABEL:&str = "s";
@@ -15,7 +16,7 @@ const PUBLIC_KEY_LABEL:&str = "p";
 const TRUST_LABEL:&str = "t";
 const BLANK_LABEL:&str = "_";
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub enum MsgContent{
 	InsecureText(String),
 	SecureText(Vec<SecureMsgIdentifier>),
@@ -26,14 +27,14 @@ pub enum MsgContent{
 	Blank()
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct SecureMsgIdentifier {
-	pub msg_id:usize,
+	pub ord:usize,
 	pub address:Address,
 	pub is_sender:bool
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct ServerMsg{
 	pub from:Address,
 	pub content:MsgContent,
@@ -64,6 +65,7 @@ impl ServerMsg{
 		let content = match segments[1] {
 			INSECURE_LABEL => MsgContent::InsecureText(content_data),
 			SECURE_LABEL => {
+				log(&format!("Proccessing Secure Message:{}", content_data));
 				if let Some(secure_msg) = state.decrypt(&from, content_data){
 					MsgContent::SecureText(vec![secure_msg])
 				}else{
@@ -77,19 +79,20 @@ impl ServerMsg{
 				}
 				MsgContent::PublicKey(content_data)
 			},
-			TRUST_LABEL => MsgContent::Trust(Address::fromSendable(content_data)),
+			TRUST_LABEL => MsgContent::Trust(Address::from_sendable(content_data)),
 			LEAVE_LABEL => MsgContent::Leave(content_data),
 			BLANK_LABEL => MsgContent::Blank(),
 			&_ => MsgContent::Blank()
 		};
 
-		
-
-		return Some(ServerMsg{
-			from: from, 
+		let msg = ServerMsg{
+			from, 
 			content,
 			time_stamp: segments[3].parse::<i64>().expect("timestamp is invalid")
-		})
+		};
+		state.add_msg(msg.clone());
+
+		return Some(msg)
 	}
 	pub fn to_string(&self, state:&Crypto) -> String{
 		let (kind, body):(&str, String) = match &self.content {
@@ -99,8 +102,8 @@ impl ServerMsg{
 				for id in ids {
 					if let Some(payload) = state.get_encrypted_msg(id) {
 						encrypted_text += &format!("{}*{}*{};", 
-							id.address.asSendable(), 
-							id.msg_id, 
+							id.address.as_sendable(), 
+							id.ord, 
 							base64::encode(payload)
 						);
 					}
@@ -111,10 +114,10 @@ impl ServerMsg{
 			MsgContent::InsecureText(txt) => (INSECURE_LABEL, txt.to_string()),
 			MsgContent::Join(group) => (JOIN_LABEL, group.to_string()),
 			MsgContent::Leave(group) => (LEAVE_LABEL, group.to_string()),
-			MsgContent::Trust(addr) => (TRUST_LABEL, addr.asSendable()),
+			MsgContent::Trust(addr) => (TRUST_LABEL, addr.as_sendable()),
 			MsgContent::Blank() => (BLANK_LABEL, String::from("_"))
 		};
-		return format!("*{}*{}*{}*", self.from.asSendable(), kind, base64::encode(body.as_bytes()))
+		return format!("*{}*{}*{}*", self.from.as_sendable(), kind, base64::encode(body.as_bytes()))
 	}
 	pub fn display(&self, state:&Crypto) -> Option<String>{
 		let msg_data = match &self.content {
@@ -128,24 +131,21 @@ impl ServerMsg{
 				}
 			},
 			MsgContent::SecureText(id) => {
-				if self.from == state.get_address() {
-					None
-				}else {
-					// Some((state.decrypt(&self.from, txt.to_string()), SECURE_LABEL))
-					if let Some(payload) = state.get_encrypted_msg(id.first().unwrap()){
-						Some((str::from_utf8(payload.as_slice()).expect("Invalid utf8 on decrypt").to_string(), SECURE_LABEL))
-					}else{
-						Some(("has sent a secure message but you cannot read it as you do not trust them".to_string(), SECURE_LABEL))
-					}
+				if let Some(payload) = state.get_encrypted_msg(id.first().unwrap()){
+					Some((str::from_utf8(payload.as_slice()).expect("Invalid utf8 on decrypt").to_string(), SECURE_LABEL))
+				}else{
+					Some(("has sent a secure message but you cannot read it as you do not trust them".to_string(), SECURE_LABEL))
 				}
 			},
 			MsgContent::InsecureText(txt) => Some((txt.to_string(), INSECURE_LABEL)),
 			MsgContent::Join(_) => Some(("went online".to_string(), JOIN_LABEL)),
 			MsgContent::Leave(_) => Some(("went offline".to_string(), LEAVE_LABEL)),
 			MsgContent::Trust(addr) => {
-				let relation = state.relation(&addr);
 				#[cfg(target_arch = "wasm32")]
-				let res = Some((format!("is trusting <span class=\"{}\">{}</span>", relation, addr.name), TRUST_LABEL));
+				let res = {
+					let relation = state.relation(&addr);
+					Some((format!("is trusting <span class=\"{}\">{}</span>", relation, addr.name), TRUST_LABEL))
+				};
 				#[cfg(not(target_arch = "wasm32"))]
 				let res = Some((format!("{} is trusting {}", self.from.name, addr.name), TRUST_LABEL));
 				res

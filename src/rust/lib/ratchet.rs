@@ -43,7 +43,7 @@ impl Ratchet{
         return SecureMsgIdentifier{
             is_sender: self.is_encrypting,
             address: addr.clone(),
-            msg_id:id
+            ord:id
         };
     }
     pub fn set_new_shared_key(&mut self, start_id:usize, shared_secret:[u8;32]) -> Result<(), String>{
@@ -83,9 +83,9 @@ impl Ratchet{
         }
     }
     pub fn get_msg(&self, id:usize) -> Option<Vec<u8>> {
-        return match &self.secret_chain[id] {
-            PayloadHandler::HasProccessed(handler) => Some(handler.result.clone()),
-            PayloadHandler::Used(res) => Some(res.clone()),
+        return match &self.secret_chain.get(id) {
+            Some(PayloadHandler::HasProccessed(handler)) => Some(handler.result.clone()),
+            Some(PayloadHandler::Used(res)) => Some(res.clone()),
             _ => None,
         }
     }

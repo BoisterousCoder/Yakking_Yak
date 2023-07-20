@@ -1,12 +1,13 @@
-use crate::lib::utils::{Address, split_and_clean, log};
-use crate::lib::ratchet::Ratchet;
-use crate::lib::ForeinAgent::ForeinAgent;
 use std::str;
-use crate::lib::KeyBundle::{KeyBundle, SecretKey};
+
 use x25519_dalek::PublicKey;
 use serde::{Serialize, Deserialize};
 
-use super::serverhandlers::SecureMsgIdentifier;
+use super::utils::{Address, log, split_and_clean};
+use super::ratchet::Ratchet;
+use super::ForeinAgent::ForeinAgent;
+use super::KeyBundle::{KeyBundle, SecretKey};
+use super::serverhandlers::{ServerMsg, SecureMsgIdentifier};
 
 const SALT_STRING:&str = "This is a temporary salt until I figure out what to put here";
 
@@ -14,22 +15,42 @@ const SALT_STRING:&str = "This is a temporary salt until I figure out what to pu
 pub struct Crypto{
 	pub is_encrypting:bool,
 	self_data:KeyBundle,
+	proxy_ratchet:Ratchet,
 	agents: Vec<ForeinAgent>,
-	//ratchets: HashMap<[u8; 32], (Ratchet, Ratchet)>
+	msgs: Vec<ServerMsg>
 }
 impl Crypto{
 	pub fn new(name:&str, device_id:i32, rand_num:u64) -> Crypto{
-		return Crypto{
-			self_data: KeyBundle::newSelfKeySet(Address::new(name, device_id), rand_num),
-			agents: vec!(),
-			//ratchets: HashMap::new(),
-			is_encrypting: false
-		}
+		let self_addr = Address::new(name, device_id);
+		let proxy = KeyBundle::new_self_key_set(self_addr.clone(), rand_num);
+		if let SecretKey::Ephemeral(proxy_private) = proxy.secret{
+			let self_data = KeyBundle::new_self_key_set(self_addr, rand_num);
+			let shared_secret= proxy_private.diffie_hellman(&self_data.public_key);
+			let salt = SALT_STRING.as_bytes().to_vec();
+			let proxy_ratchet = Ratchet::new(&shared_secret, false, salt);
+
+			let mut state = Crypto{
+				self_data,
+				proxy_ratchet,
+				agents: vec!(),
+				is_encrypting: false,
+				msgs: vec!()
+			};
+			state.add_public_key(proxy.address.clone(), proxy.public_key.as_bytes().clone());
+			state.trust(proxy.address.name.to_string());
+
+			return state;
+		}else{
+			panic!("Unreachable!!!");
+		};
+		
 	}
 	pub fn add_public_key(&mut self, addr:Address, public_key_data:[u8; 32]) -> bool{
+		log(&format!("Adding Public key: {}@{} -- {}", addr.name, addr.device_id, public_key_data.len()));
 		let public_key = PublicKey::from(public_key_data);
 		for agent in &self.agents {
-			if &agent.keys.public_key == &public_key || &agent.keys.address == &addr{
+			if &agent.keys.address == &addr{
+				log("Key already in list");
 				return false;
 			}
 		}
@@ -55,17 +76,25 @@ impl Crypto{
 						agent.to_ratchet = Some(Ratchet::new(&shared_secret, true, salt.clone()));
 						agent.from_ratchet = Some(Ratchet::new(&shared_secret, false, salt));
 
-						//self.ratchets.insert(shared_secret.as_bytes().clone(), (to_rachet, from_rachet));
 						agent.keys.secret = SecretKey::Shared(shared_secret);
 					},
-					SecretKey::Empty() => panic!("This code should never be called! You must have an Ephemeral secret key."),
-					SecretKey::Shared(_) => panic!("This code should never be called! You must have an Ephemeral secret key.")
+					_ => panic!("This code should never be called! You must have an Ephemeral secret key.")
 				};
 				
 				return Some(&agent.keys.address);
 			}
 		}
 		None
+	}
+	pub fn add_msg(&mut self, msg:ServerMsg){
+		self.msgs.push(msg);
+		self.msgs.sort_by(|a, b| a.time_stamp.cmp(&b.time_stamp))
+	}
+	pub fn get_msgs(&self) -> Vec<ServerMsg>{
+		return self.msgs.clone();
+	}
+	pub fn empty_msgs(&mut self){
+		return self.msgs = vec![];
 	}
 	fn keys(&self, forien:&Address) -> Option<&KeyBundle>{
 		if forien.eq(&self.self_data.address) {
@@ -79,16 +108,12 @@ impl Crypto{
 		return None;
 	}	
 	pub fn agent_from_pub_key(&self, key:&str) -> Option<&ForeinAgent>{
-		// if self.public_key() == key.to_string() {
-			// return Some(&self.self_data);
-		// }else {
 		for agent in &self.agents {
 			if base64::encode(agent.keys.public_key.as_bytes()) == key.to_string(){
 				return Some(agent);
 			}
 		}
 		return None;
-		// }
 	}
 	pub fn relation(&self, forien:&Address) -> String {
 		return match self.keys(forien) {
@@ -105,15 +130,18 @@ impl Crypto{
 	pub fn list_people(&self) -> String{
 		let mut s = String::new();
 		for agent in &self.agents {
-			s = format!("{}{}@{},\n", s, agent.keys.address.name, agent.keys.address.deviceId);
+			s = format!("{}{}: {}@{}\n",
+				s, 
+				self.relation(&agent.keys.address),
+				agent.keys.address.name, 
+				agent.keys.address.device_id);
 		}
 		return s;
 	}
 	pub fn encrypt(&mut self, text:String) -> Vec<SecureMsgIdentifier> {
 		let mut msg_ids = vec![];
 		for agent in &mut self.agents {
-			if let SecretKey::Shared(secret) = &agent.keys.secret{
-				let key = secret.as_bytes();
+			if let SecretKey::Shared(_) = &agent.keys.secret{
 				if let Some(ratchet) = &mut agent.to_ratchet{
 					let msg_id = ratchet.len();
 					let payload_raw = text.as_bytes();
@@ -127,21 +155,29 @@ impl Crypto{
 		let addressed_msgs:Vec<&str> = split_and_clean(&addressed_msg_data, ';');
 		for addressed_msg in addressed_msgs{
 			let addressed_msg_split:Vec<&str> = split_and_clean(addressed_msg, '*');
-			let address = Address::fromSendable(addressed_msg_split[0].to_string());
+			let address = Address::from_sendable(addressed_msg_split[0].to_string());
 			let msg_id = addressed_msg_split[1].parse::<usize>().expect("Message ID is not an unsigned int!");
-			if address == self.self_data.address {
+			let payload = base64::decode(addressed_msg_split[2]).expect("recived invalid base64 data");
+
+			log(&format!("Decrypting...\n Messages:{}\n My addr: {}\n From: {}\n To: {}",
+				addressed_msg_data,
+				self.get_address().as_sendable(),
+				from.as_sendable(),
+				address.as_sendable()
+			));
+
+			if from == &self.get_address() {
+				log("Poxy message found!");
+				return Some(self.proxy_ratchet.process_payload(&self.self_data.address, msg_id, payload.as_slice()));
+			}else if address == self.self_data.address {
 				for agent in &mut self.agents{
 					if &agent.keys.address == from {
-						if let SecretKey::Shared(secret) = &mut agent.keys.secret{
+						if let SecretKey::Shared(_) = &mut agent.keys.secret{
 							if let Some(ratchet) = &mut agent.from_ratchet{
-								let payload = base64::decode(addressed_msg_split[2]).expect("recived invalid base64 data");
-								// let payload_raw = ratchet.process_payload(msg_id, payload.as_slice());
-								// return str::from_utf8(&payload_raw).expect("Invalid utf8 on decrypt").to_string();
 								return Some(ratchet.process_payload(&agent.keys.address, msg_id, payload.as_slice()));
 							}
 						}
 						return None;
-						//return "has sent a secure message but you cannot read it as you do not trust them".to_string();
 					}
 				}
 			}
@@ -157,10 +193,17 @@ impl Crypto{
 	pub fn get_encrypted_msg(&self, id:&SecureMsgIdentifier) -> Option<Vec<u8>>{
 		for agent in &self.agents {
 			if agent.keys.address.eq(&id.address) {
-				return if id.is_sender {
-					Some(agent.to_ratchet.as_ref().unwrap().get_msg(id.msg_id).expect("message not decryped yet"))
-				}else {
-					return Some(agent.from_ratchet.as_ref().unwrap().get_msg(id.msg_id).expect("message not decryped yet"))
+				log(&format!("Getting Encrypted msg.. \n to:{}\n from:{}\n is_sender:{}\n Msg ID:{}", 
+					agent.keys.address.as_sendable(), 
+					self.self_data.address.as_sendable(),
+					agent.keys.address == self.self_data.address, 
+					id.ord));
+				return if agent.keys.address == self.self_data.address && !id.is_sender {
+					Some(self.proxy_ratchet.get_msg(id.ord).expect("self message not decryped yet"))
+				}else if id.is_sender{
+					Some(agent.to_ratchet.as_ref().unwrap().get_msg(id.ord).expect("to message not decryped yet"))
+				}else{
+					Some(agent.from_ratchet.as_ref().unwrap().get_msg(id.ord).expect("from message not decryped yet"))
 				};
 			}
 		}

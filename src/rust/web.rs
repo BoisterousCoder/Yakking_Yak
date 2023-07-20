@@ -53,7 +53,7 @@ pub fn handleEvent(_state:&str, send_msg:Function, event_name:&str, value:&str) 
 		"msg" => {
 			log(&format!("Recieved Msg {}", &value) );
 			if let Some(msg) = ServerMsg::from_server(value, &mut state){
-				display_msg(&msg, &state);
+				update_msgs(&state);
 
 				if let MsgContent::Join(_) = msg.content {
 					let content_to_send = MsgContent::PublicKey(state.public_key());
@@ -63,10 +63,10 @@ pub fn handleEvent(_state:&str, send_msg:Function, event_name:&str, value:&str) 
 			}
 		},
 		"msgInput" => {
-			log(&"Sent Message" );
+			log("Sent Message");
 			let content = match state.is_encrypting {
 				true => {
-					log(&value );
+					log(&value);
 					// log(&state.encrypt(value.to_string()) );
 					MsgContent::SecureText(state.encrypt(value.to_string()))
 				},
@@ -80,6 +80,7 @@ pub fn handleEvent(_state:&str, send_msg:Function, event_name:&str, value:&str) 
 			let content = MsgContent::Join(value.to_string());
 			let msg =  ServerMsg::new(&state.get_address(), content);
 			send_msg.call1(&JsValue::null(), &msg.to_writable(&state).into());
+			state.empty_msgs();
 		},
 		"isEncrypting" => {
 			log(&format!("isEncrypting Changed to {}", value) );
@@ -100,7 +101,7 @@ pub fn handleEvent(_state:&str, send_msg:Function, event_name:&str, value:&str) 
 			}
 			log(&serde_json::to_string(&state).unwrap());
 		}
-		_ => log(&"Unknown Event Occured" ),
+		_ => log("Unknown Event Occured"),
 	}
 	
 	return serde_json::to_string(&state).unwrap();
@@ -127,6 +128,17 @@ fn createListener(ele:Element, event_name:&str, property:&str, input_name:&str, 
 	", input_name, property, prevent_default.to_string(), is_resetting.to_string());
 	let add_event_result = Function::new_with_args("e", &func_body);
 	ele.add_event_listener_with_callback(event_name, &add_event_result);
+}
+fn update_msgs(state:&Crypto){
+	let func_body = "
+		document.getElementById('messages').innerHTML = '';
+	";
+	let empty_func = Function::new_no_args(&func_body);
+	empty_func.call0(&JsValue::null());
+
+	for msg in state.get_msgs(){
+        display_msg(&msg, state);
+    }
 }
 fn display_msg(msg:&ServerMsg, state:&Crypto){
 	if let Some(display_msg) = msg.display(state){

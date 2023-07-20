@@ -19,7 +19,7 @@ pub struct KeyBundle{
 	pub address: Address
 }
 impl KeyBundle{
-	pub fn newSelfKeySet(addr:Address, randNum:u64) -> KeyBundle{
+	pub fn new_self_key_set(addr:Address, randNum:u64) -> KeyBundle{
 		log("Creating Ephemeral Key..");
 		let rng = ChaCha20Rng::seed_from_u64(randNum);
 		let secret = EphemeralSecret::new(rng);

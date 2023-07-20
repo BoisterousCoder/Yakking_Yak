@@ -114,6 +114,7 @@ fn build_ui(app: &adw::Application){
     let group_entry = Entry::builder()
         .hexpand(true)
         .placeholder_text("Group")
+        .text("Default")
         .build();
     group_entry.connect_activate(on_join_group);
     upper_right_box.append(&group_entry);
@@ -191,14 +192,14 @@ fn build_ui(app: &adw::Application){
         .build();
 
     window.show();
-
+    
     timeout_add_local( Duration::from_millis(SLEEP_DURATION), move || {
         while let Some(txt) = MSG_QUEUE.pop() {
             log("handing msg");
             let state = &mut STATE.lock().expect("unable to aquire state");
 
             if let Some(msg) = ServerMsg::from_server(&txt, state){
-                display_msg(&msg_list, msg.clone(), state);
+                update_msg_display(&msg_list, state);
 
                 if let MsgContent::Join(_) = msg.content {
                     let content_to_send = MsgContent::PublicKey(state.public_key());
@@ -213,6 +214,8 @@ fn build_ui(app: &adw::Application){
 
 fn on_join_group(group_entry:&Entry){
     let state = &mut STATE.lock().unwrap();
+    state.empty_msgs();
+
     log("Group Change");
     let content = MsgContent::Join(group_entry.buffer().text().to_string());
     let msg =  ServerMsg::new(&state.get_address(), content);
@@ -241,7 +244,15 @@ fn on_send_msg(msg_entry:&Entry){
     SOCKET_CLIENT.emit(label, msg.to_string(&state)).expect("failed to send join message");
     msg_entry.buffer().set_text("");
 }
-fn display_msg(list:&ListBox, msg:ServerMsg, state:&mut Crypto){
+fn update_msg_display(list:&ListBox, state:&Crypto){
+    while let Some(child) = list.first_child() {
+        list.remove(&child);
+    }
+    for msg in state.get_msgs(){
+        display_msg(list, msg, state);
+    }
+}
+fn display_msg(list:&ListBox, msg:ServerMsg, state:&Crypto){
     if let Some(msg_display) = msg.display(state){
         let mut msg_parts = msg_display.split("\r").into_iter();
         let name_plate = msg_parts.next().unwrap();
@@ -262,8 +273,8 @@ fn display_msg(list:&ListBox, msg:ServerMsg, state:&mut Crypto){
 }
 
 fn on_msg_click(from:&Address){
-    log(&format!("clicked on {}", from.name));
     let state = &mut STATE.lock().unwrap();
+    log(&format!("clicked on {}\n All people known:\n{}", from.name, state.list_people()));
     if state.relation(from) == "allowedTrust".to_string(){
         let content = match state.trust(from.name.to_string()) {
             Some(forein) => Some(MsgContent::Trust(forein.clone())),
