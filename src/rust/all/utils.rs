@@ -7,8 +7,9 @@ use serde::{Deserialize, Serialize};
 #[cfg(target_arch = "wasm32")]
 use web_sys::console;
 
-pub fn decodeBase64(text:&str) -> String{
+pub fn decode_base64(text:&str) -> String{
 	log(&format!("Decoding base64 ({})", text));
+	#[allow(deprecated)]
 	return str::from_utf8(base64::decode(text).unwrap().as_slice()).unwrap().to_string()
 }
 
@@ -24,11 +25,13 @@ impl Address{
 			device_id
 		}
 	}
+	#[allow(deprecated)]
 	pub fn as_sendable(&self) -> String{
 		format!("{}@{}", base64::encode(self.name.clone()), base64::encode(self.device_id))
 	}
 	pub fn from_sendable(s:String) -> Address{
 		let addr_data:Vec<&str> = split_and_clean(&s, '@');
+		#[allow(deprecated)]
 		let device_byte_vec = base64::decode(addr_data[1]).unwrap();
 		let mut device_id = [0u8; 32];
 		let mut i = 0;
@@ -39,7 +42,7 @@ impl Address{
 				break;
 			}
 		}
-		Address::new(&decodeBase64(addr_data[0]), device_id)
+		Address::new(&decode_base64(addr_data[0]), device_id)
 	}
 }
 pub fn split_and_clean(text:&str, split:char) -> Vec<&str>{

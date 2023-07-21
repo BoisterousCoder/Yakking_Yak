@@ -1,7 +1,7 @@
 #![cfg(not(target_arch = "wasm32"))]
 use serde::{Serialize, Deserialize};
 
-use crate::all::ForeinAgent::ForeinAgent;
+use crate::all::forein_agent::ForeinAgent;
 use crate::all::serverhandlers::ServerMsg;
 use crate::all::ratchet::Ratchet;
 use crate::all::utils::Address;
@@ -70,7 +70,9 @@ impl GroupSave {
         return None;
     }
     fn filename(addr:&Address, group:&str) -> String {
+        #[allow(deprecated)]
         let safe_group = base64::encode(group);
+        #[allow(deprecated)]
         let filename = &format!("{}@{}", addr.as_sendable(), base64::encode(safe_group));
         format!("{}/{}.{}", SAVE_DIR, filename, FILE_EXT)
     }

@@ -49,10 +49,12 @@ fn on_sign_in_attempt(sign_in_button:&Button) -> Option<SignInDetails>{
         fs::create_dir(SAVE_DIR).expect("can't make save directory");
     }
 
+    #[allow(deprecated)]
     let filename = format!("{}/{}.{}", SAVE_DIR, base64::encode(&username), FILE_EXTENTION);
     if !fs::metadata(&filename).is_ok() {
         let mut device_id = [0u8; 32];
         OsRng.fill_bytes(&mut device_id);
+        #[allow(deprecated)]
         let device_id_str = base64::encode(device_id);
 
         let mut file = File::create(&filename).expect("unable to create file");
@@ -73,6 +75,7 @@ fn on_sign_in_attempt(sign_in_button:&Button) -> Option<SignInDetails>{
         if file.read_to_string(&mut data).is_ok(){
             let key = new_magic_crypt!(&password, 256);
             if let Some(device_id_str) = key.decrypt_base64_to_string(&data).ok(){
+                #[allow(deprecated)]
                 let device_id_vec = base64::decode(device_id_str).unwrap();
                 let mut device_id = [0u8; 32];
                 let mut i = 0;

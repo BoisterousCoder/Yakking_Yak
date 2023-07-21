@@ -10,8 +10,8 @@ use crate::web::save::GroupSave;
 
 use super::utils::{Address, log, split_and_clean};
 use super::ratchet::Ratchet;
-use super::ForeinAgent::ForeinAgent;
-use super::KeyBundle::{KeyBundle, SecretKey};
+use super::forein_agent::ForeinAgent;
+use super::key_bundle::{KeyBundle, SecretKey};
 use super::serverhandlers::{ServerMsg, SecureMsgIdentifier};
 
 const SALT_STRING:&str = "This is a temporary salt until I figure out what to put here";
@@ -119,6 +119,7 @@ impl Crypto{
 	}	
 	pub fn agent_from_pub_key(&self, key:&str) -> Option<&ForeinAgent>{
 		for agent in &self.agents {
+			#[allow(deprecated)]
 			if base64::encode(agent.keys.public_key.as_bytes()) == key.to_string(){
 				return Some(agent);
 			}
@@ -159,6 +160,7 @@ impl Crypto{
 			let addressed_msg_split:Vec<&str> = split_and_clean(addressed_msg, '*');
 			let address = Address::from_sendable(addressed_msg_split[0].to_string());
 			let msg_id = addressed_msg_split[1].parse::<usize>().expect("Message ID is not an unsigned int!");
+			#[allow(deprecated)]
 			let payload = base64::decode(addressed_msg_split[2]).expect("recived invalid base64 data");
 
 			log(&format!("Decrypting...\n Messages:{}\n My addr: {}\n From: {}\n To: {}",
@@ -187,6 +189,7 @@ impl Crypto{
 		None
 	}
 	pub fn public_key(&self) -> String{
+		#[allow(deprecated)]
 		return base64::encode(self.self_data.public_key.as_bytes());
 	}
 	pub fn get_address(&self) -> Address{

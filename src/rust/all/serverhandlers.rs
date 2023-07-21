@@ -1,7 +1,7 @@
 extern crate chrono;
 
 use crate::all::store::Crypto;
-use crate::all::utils::{decodeBase64, Address, split_and_clean, log};
+use crate::all::utils::{decode_base64, Address, split_and_clean, log};
 use std::str;
 use std::convert::TryInto;
 use base64;
@@ -55,11 +55,8 @@ impl ServerMsg{
 		if segments.len() < 4 {
 			return None;
 		}
-		let addr_segments: Vec<&str> = split_and_clean(segments[0], '@');
-		let content_data = decodeBase64(segments[2]);
-
-		// let name = decodeBase64(addr_segments[0]);
-		// let device_id = baddr_segments[1].parse().unwrap();
+		let content_data = decode_base64(segments[2]);
+		
 		let from = Address::from_sendable(segments[0].to_string());
 
 		let content = match segments[1] {
@@ -100,6 +97,7 @@ impl ServerMsg{
 			MsgContent::SecureText(ids) => {
 				let mut encrypted_text:String = "".to_string();
 				for id in ids {
+					#[allow(deprecated)]
 					if let Some(payload) = state.get_encrypted_msg(id) {
 						encrypted_text += &format!("{}*{}*{};", 
 							id.address.as_sendable(), 
@@ -117,6 +115,7 @@ impl ServerMsg{
 			MsgContent::Trust(addr) => (TRUST_LABEL, addr.as_sendable()),
 			MsgContent::Blank() => (BLANK_LABEL, String::from("_"))
 		};
+		#[allow(deprecated)]
 		return format!("*{}*{}*{}*", self.from.as_sendable(), kind, base64::encode(body.as_bytes()))
 	}
 	pub fn display(&self, state:&Crypto) -> Option<String>{
@@ -178,6 +177,7 @@ impl ServerMsg{
 }
 
 fn decode_to_public_key_bytes(s:String) -> [u8; 32]{
+	#[allow(deprecated)]
 	let data = base64::decode(s).unwrap();
 	let slice = data.as_slice();
 	return match slice.try_into() {

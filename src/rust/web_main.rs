@@ -1,11 +1,10 @@
 #![cfg(target_arch = "wasm32")]
-use std::fmt::format;
-use std::{string::String, thread::Thread, time::Duration, option::Option};
+use std::string::String;
 
-use web_sys::{console, window, Document, Event, Element};
+use web_sys::{window, Document, Element};
 use wasm_bindgen::{prelude::*, JsValue};
-use js_sys::{Function, Array};
-use std::{thread, format};
+use js_sys::Function;
+use std::format;
 
 mod all;
 mod web;

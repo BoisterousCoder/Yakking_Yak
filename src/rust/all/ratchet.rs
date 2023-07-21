@@ -46,22 +46,23 @@ impl Ratchet{
             ord:id
         };
     }
-    pub fn set_new_shared_key(&mut self, start_id:usize, shared_secret:[u8;32]) -> Result<(), String>{
-        self.gen_handlers_to(start_id-1);
-        if let PayloadHandler::Unused(handler) = &self.secret_chain[start_id-1] {
-            let (last_handler, next_handler) = handler.next(Some(shared_secret));
-            self.secret_chain[start_id-1] = PayloadHandler::MadeNext(last_handler);
-            self.secret_chain[start_id] = PayloadHandler::Unused(next_handler);
-        } else if let PayloadHandler::HasProccessed(handler) = &self.secret_chain[start_id-1] {
-            let next_handler = handler.next(Some(shared_secret));
-            self.secret_chain[start_id-1] = PayloadHandler::Used(handler.result.clone());
-            self.secret_chain[start_id] = PayloadHandler::Unused(next_handler);
-        } else {
-            let err = format!("Note: PayloadHandlers have already been gennerated at or beyond the id {} and a new key set cannot be started", start_id);
-            return Err(err);
-        }
-        Ok(())
-    }
+    // TODO: Use this every so often
+    // pub fn set_new_shared_key(&mut self, start_id:usize, shared_secret:[u8;32]) -> Result<(), String>{
+    //     self.gen_handlers_to(start_id-1);
+    //     if let PayloadHandler::Unused(handler) = &self.secret_chain[start_id-1] {
+    //         let (last_handler, next_handler) = handler.next(Some(shared_secret));
+    //         self.secret_chain[start_id-1] = PayloadHandler::MadeNext(last_handler);
+    //         self.secret_chain[start_id] = PayloadHandler::Unused(next_handler);
+    //     } else if let PayloadHandler::HasProccessed(handler) = &self.secret_chain[start_id-1] {
+    //         let next_handler = handler.next(Some(shared_secret));
+    //         self.secret_chain[start_id-1] = PayloadHandler::Used(handler.result.clone());
+    //         self.secret_chain[start_id] = PayloadHandler::Unused(next_handler);
+    //     } else {
+    //         let err = format!("Note: PayloadHandlers have already been gennerated at or beyond the id {} and a new key set cannot be started", start_id);
+    //         return Err(err);
+    //     }
+    //     Ok(())
+    // }
     fn gen_handlers_to(&mut self, id:usize){
         loop {
             let len = self.secret_chain.len();
@@ -192,6 +193,7 @@ impl HasProccessedLink{
 }
 
 fn proccess_payload(aes_key:&[u8; 32], unique_iv:&[u8;12], is_encrypting:bool, payload:&[u8]) -> Vec<u8> {
+    #[allow(deprecated)]
     log(&format!("Proccessing Payload:\n is_encrypting:{},\n aes_key:{},\n unique_iv:{},\n payload:{}\n",
         is_encrypting,
         base64::encode(aes_key),

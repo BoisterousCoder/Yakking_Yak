@@ -1,5 +1,5 @@
 use serde::{Serialize, Deserialize};
-use crate::all::KeyBundle::KeyBundle;
+use crate::all::key_bundle::KeyBundle;
 use crate::all::ratchet::Ratchet;
 
 #[derive(Serialize, Deserialize, Clone)]
