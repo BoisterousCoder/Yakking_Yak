@@ -1,12 +1,12 @@
 #![cfg(not(target_arch = "wasm32"))]
 
-use crate::gtk::build_ui::build_ui;
+use crate::gtk::build_ui::build_sign_in;
 use ::gtk::{glib::ExitCode, prelude::*, Button, CheckButton, Entry};
 use adw::{ActionRow, Application};
 use ::gtk::{Box, ListBox, Orientation, Popover};
+use rand_core::{OsRng, RngCore};
 use crate::gtk::save::GroupSave;
-use lib::utils::Address;
-use rand_core::{RngCore, OsRng};
+use all::utils::Address;
 use std::sync::{Mutex, Arc};
 use rust_socketio::client::Client;
 use rust_socketio::{ClientBuilder, Payload};
@@ -15,12 +15,12 @@ use crossbeam_queue::SegQueue;
 #[macro_use]
 extern crate lazy_static;
 
-mod lib;
+mod all;
 mod gtk;
 
-use crate::lib::store::Crypto;
-use crate::lib::serverhandlers::{ServerMsg, MsgContent};
-use crate::lib::utils::log;
+use crate::all::store::Crypto;
+use crate::all::serverhandlers::{ServerMsg, MsgContent};
+use crate::all::utils::log;
 
 static APP_ID: &str = "com.BoisterousCoder.YakkingYak";
 static APP_TITLE: &str = "Yakking Yak";
@@ -29,10 +29,16 @@ const SLEEP_DURATION:u64 = 1500;//In mils
 const SEED:u64 = 1234567890; //TODO: fix the seed to its actually random
 const PASSWORD:&str = "ABCDE";
 const PROXY_SEED:u64 = 0987654321; //TODO: fix the seed to its actually random
-const DEVICE_ID:i32 = 12345;//TODO: Make this useful
+const DEVICE_ID:[u8; 32] = [0u8; 32];//TODO: Make this useful
 const MSG_TYPES:[char; 6] = ['i', 's', 't', 'l', 'p', 'j'];
 const SOCKET_SERVER_ADDRESS:&'static str = "http://localhost:4000";
 const IS_AUTO_SAVING:bool = true;
+
+struct SignInDetails {
+    pub private_device_id:[u8; 32],
+    pub username:String,
+    pub password:String
+}
 
 lazy_static! {
     static ref GROUP:Mutex<String> = {
@@ -41,7 +47,7 @@ lazy_static! {
     static ref STATE:Mutex<Crypto> = {
         let user_number:u32 = OsRng.next_u32();
         let user_name = format!("Anon{:X}", user_number);
-        Mutex::new(Crypto::new(&user_name, DEVICE_ID, SEED, PROXY_SEED))
+        Mutex::new(Crypto::new(&user_name, PASSWORD, DEVICE_ID, OsRng.next_u64(), OsRng.next_u64()))
     };
     pub static ref MSG_QUEUE:SegQueue::<String> = SegQueue::new();
     pub static ref SOCKET_CLIENT:Arc<Client> = {
@@ -70,7 +76,7 @@ fn main() -> ExitCode {
         .application_id(APP_ID)
         .build();
     
-    app.connect_activate(build_ui);
+    app.connect_activate(build_sign_in);
 
     app.run()
 }
@@ -81,13 +87,13 @@ fn on_join_group(group_entry:&Entry){
     let group = &mut GROUP.lock().unwrap();
     if !group.is_empty(){
         let old_save = state.group_as_save(&group);
-        old_save.save(PASSWORD).expect("Unable to save the current group");
+        old_save.save(&state.password).expect("Unable to save the current group");
     }
     
     let new_group = group_entry.buffer().text().to_string();
     **group = new_group;
     
-    if let Some(save) = GroupSave::load(state.get_address(), &group, PASSWORD){
+    if let Some(save) = GroupSave::load(state.get_address(), &group, &state.password){
         state.load_group_save(save);
         log("Successfully loaded group")
     }else{
@@ -135,10 +141,9 @@ fn update_msg_display(msg_list:&ListBox, user_list:&Popover, state:&Crypto){
         }else{
             "untrusted".to_string()
         };
-        let user_display = format!("{}: {}@{}",
+        let user_display = format!("{}--{}",
             relation_display,
-            agent.keys.address.name, 
-            agent.keys.address.device_id);
+            agent.keys.address.name);
         let user_button = Button::builder()
             .label(user_display)
             .halign(::gtk::Align::Start)
@@ -151,7 +156,7 @@ fn update_msg_display(msg_list:&ListBox, user_list:&Popover, state:&Crypto){
     
     if IS_AUTO_SAVING{
         state.group_as_save(&GROUP.lock().unwrap())
-            .save(PASSWORD)
+            .save(&state.password)
             .expect("Failed to autosave!");
     }
 }

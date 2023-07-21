@@ -6,7 +6,7 @@ authors = ["BoisterousCoder <boisterouscoder@gmail.com>"]
 edition = "2018"
 
 [[bin]]
-name = "Yakking_Yak"
+name = "yakking_yak"
 path = "src/rust/gtk_main.rs"
 
 [lib]

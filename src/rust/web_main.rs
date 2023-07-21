@@ -7,15 +7,17 @@ use wasm_bindgen::{prelude::*, JsValue};
 use js_sys::{Function, Array};
 use std::{thread, format};
 
-mod lib;
+mod all;
 mod web;
 
-use crate::lib::store::Crypto;
-use crate::lib::serverhandlers::{ServerMsg, MsgContent};
-use crate::lib::utils::log;
+use crate::all::store::Crypto;
+use crate::all::serverhandlers::{ServerMsg, MsgContent};
+use crate::all::utils::log;
 
-const RANDOM_NUMBER:u64 = 1234567890; //TODO: fix the seed to its actually random
-const DEVICE_ID:i32 = 12345;//TODO: Make this useful
+const SEED:u64 = 1234567890; //TODO: fix the seed to its actually random
+const PROXY_SEED:u64 = 0987654321; //TODO: fix the seed to its actually random
+const DEVICE_ID:[u8; 32] = [0u8; 32];//TODO: Make this useful
+const PASSWORD:&str = "ABCDE";
 
 #[wasm_bindgen(start)]
 pub fn startListeners(){
@@ -39,7 +41,7 @@ pub fn createState(name:&str) -> String{
 	dom.get_element_by_id("name").unwrap().set_inner_html(name);
 
 	log(&format!("Initializing State for {}..", name) );
-	let state = Crypto::new(name, DEVICE_ID, RANDOM_NUMBER);
+	let state = Crypto::new(name, PASSWORD, DEVICE_ID, SEED, PROXY_SEED);
 	log("Returning State.." );
 	
 	return serde_json::to_string(&state).unwrap();
@@ -81,7 +83,7 @@ pub fn handleEvent(_state:&str, send_msg:Function, event_name:&str, value:&str) 
 			let content = MsgContent::Join(value.to_string());
 			let msg =  ServerMsg::new(&state.get_address(), content);
 			send_msg.call1(&JsValue::null(), &msg.to_writable(&state).into());
-			state.empty_msgs();
+			state.new_group(SEED, PROXY_SEED);
 		},
 		"isEncrypting" => {
 			log(&format!("isEncrypting Changed to {}", value) );

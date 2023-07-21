@@ -15,21 +15,31 @@ pub fn decodeBase64(text:&str) -> String{
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Debug)]
 pub struct Address{
 	pub name: String,
-	pub device_id: i32
+	pub device_id: [u8; 32]
 }
 impl Address{
-	pub fn new(name:&str, device_id:i32) -> Address{	
+	pub fn new(name:&str, device_id:[u8; 32]) -> Address{	
 		return Address{
 			name: name.to_string(),
 			device_id
 		}
 	}
 	pub fn as_sendable(&self) -> String{
-		format!("{}@{}", base64::encode(self.name.clone()), self.device_id)
+		format!("{}@{}", base64::encode(self.name.clone()), base64::encode(self.device_id))
 	}
 	pub fn from_sendable(s:String) -> Address{
 		let addr_data:Vec<&str> = split_and_clean(&s, '@');
-		Address::new(&decodeBase64(addr_data[0]), addr_data[1].parse().unwrap())
+		let device_byte_vec = base64::decode(addr_data[1]).unwrap();
+		let mut device_id = [0u8; 32];
+		let mut i = 0;
+		for byte in device_byte_vec{
+			device_id[i] = byte;
+			i += 1;
+			if i == device_id.len() {
+				break;
+			}
+		}
+		Address::new(&decodeBase64(addr_data[0]), device_id)
 	}
 }
 pub fn split_and_clean(text:&str, split:char) -> Vec<&str>{

@@ -19,13 +19,14 @@ const SALT_STRING:&str = "This is a temporary salt until I figure out what to pu
 #[derive(Serialize, Deserialize)]
 pub struct Crypto{
 	pub is_encrypting:bool,
+	pub password:String,
 	self_data:KeyBundle,
 	proxy_ratchet:Ratchet,
 	agents: Vec<ForeinAgent>,
 	msgs: Vec<ServerMsg>
 }
 impl Crypto{
-	pub fn new(name:&str, device_id:i32, seed:u64, proxy_seed:u64) -> Crypto{
+	pub fn new(name:&str, password:&str, device_id:[u8; 32], seed:u64, proxy_seed:u64) -> Crypto{
 		let self_addr = Address::new(name, device_id);
 		let proxy = KeyBundle::new_self_key_set(self_addr.clone(), proxy_seed);
 		if let SecretKey::Ephemeral(proxy_private) = proxy.secret{
@@ -36,6 +37,7 @@ impl Crypto{
 
 			let mut state = Crypto{
 				self_data,
+				password:password.to_string(),
 				proxy_ratchet,
 				agents: vec!(),
 				is_encrypting: false,
@@ -51,7 +53,7 @@ impl Crypto{
 		
 	}
 	pub fn add_public_key(&mut self, addr:Address, public_key_data:[u8; 32]) -> bool{
-		log(&format!("Adding Public key: {}@{} -- {}", addr.name, addr.device_id, public_key_data.len()));
+		log(&format!("Adding Public key: {} -- {}", addr.name, public_key_data.len()));
 		let public_key = PublicKey::from(public_key_data);
 		for agent in &self.agents {
 			if &agent.keys.address == &addr{
@@ -101,7 +103,7 @@ impl Crypto{
 	}
 	pub fn new_group(&mut self, seed:u64, proxy_seed:u64){
 		let addr = self.get_address();
-		let new_state = Self::new(&addr.name, addr.device_id, seed, proxy_seed);
+		let new_state = Self::new(&addr.name, &self.password, addr.device_id, seed, proxy_seed);
 		*self = new_state;
 	}
 	fn keys(&self, forien:&Address) -> Option<&KeyBundle>{

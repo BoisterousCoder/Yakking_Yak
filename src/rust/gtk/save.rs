@@ -1,10 +1,10 @@
 #![cfg(not(target_arch = "wasm32"))]
 use serde::{Serialize, Deserialize};
 
-use crate::lib::ForeinAgent::ForeinAgent;
-use crate::lib::serverhandlers::ServerMsg;
-use crate::lib::ratchet::Ratchet;
-use crate::lib::utils::Address;
+use crate::all::ForeinAgent::ForeinAgent;
+use crate::all::serverhandlers::ServerMsg;
+use crate::all::ratchet::Ratchet;
+use crate::all::utils::Address;
 
 use magic_crypt::MagicCryptTrait;
 use magic_crypt::new_magic_crypt;

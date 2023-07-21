@@ -1,21 +1,86 @@
-use ::gtk::{prelude::*, Button, CheckButton, Entry};
+use ::gtk::{prelude::*, Button, CheckButton, Entry, Text};
 use adw::{ApplicationWindow, HeaderBar};
 use ::gtk::{Box, ListBox, Orientation, SelectionMode, ScrolledWindow, MenuButton, Popover};
 use glib::{self, timeout_add_local};
 use std::time::Duration;
 
 use crate::{on_join_group, on_send_msg, SOCKET_CLIENT, update_msg_display, SLEEP_DURATION, APP_TITLE, MSG_QUEUE, STATE};
-use crate::lib::{serverhandlers::{ServerMsg, MsgContent}, utils::log};
+use crate::all::{serverhandlers::{ServerMsg, MsgContent}, utils::log};
 
-pub fn build_ui(app: &adw::Application){
-    let msg_list = ListBox::builder()
-    .vexpand(true)
-    .selection_mode(SelectionMode::None)
-    .css_classes(vec![String::from("boxed-list")])
-    .build();
+use super::sign_in::on_sign_in;
 
+pub fn build_sign_in(app: &adw::Application) {
     let content = Box::new(Orientation::Vertical, 0);
     content.append(&HeaderBar::new());
+
+    let sign_in_content = Box::new(Orientation::Vertical, 0);
+
+    let username_label = Text::builder()
+        .text("Username:")
+        .editable(false)
+        .build();
+    sign_in_content.append(&username_label);
+    let username_entry = Entry::builder()
+        .margin_bottom(2)
+        .name("Username")
+        .build();
+    username_entry.connect_activate(|username_entry| {
+        let sign_in_button = username_entry
+            .parent().unwrap()
+            .last_child().unwrap()
+            .prev_sibling().unwrap()
+            .downcast().expect("Found UI emlement but is not button! UI is broke pls fix");
+        on_sign_in(&sign_in_button);
+    });
+    sign_in_content.append(&username_entry);
+
+    let password_label = Text::builder()
+        .text("Password:")
+        .editable(false)
+        .build();
+    sign_in_content.append(&password_label);
+    let password_entry = Entry::builder()
+        .margin_bottom(2)
+        .name("Password")
+        .input_purpose(gtk::InputPurpose::Password)
+        .build();
+    password_entry.connect_activate(|username_entry| {
+        let sign_in_button = username_entry
+            .parent().unwrap()
+            .last_child().unwrap()
+            .prev_sibling().unwrap()
+            .downcast().expect("Found UI emlement but is not button! UI is broke pls fix");
+        on_sign_in(&sign_in_button);
+    });
+    sign_in_content.append(&password_entry);
+
+    let sign_in_button = Button::builder()
+        .margin_bottom(5)
+        .label("Sign In")
+        .build();
+    sign_in_button.connect_clicked(on_sign_in);
+    sign_in_content.append(&sign_in_button);
+
+    let errors_label = Text::builder()
+        .text("")
+        .editable(false)
+        .build();
+    sign_in_content.append(&errors_label);
+    
+    content.append(&sign_in_content);
+
+    let window = ApplicationWindow::builder()
+        .application(app)
+        .title(APP_TITLE)
+        .default_width(350)
+        .content(&content)
+        .build();
+
+    window.show();
+}
+
+pub fn build_content(content: &Box){
+    let app_content = Box::new(Orientation::Vertical, 0);
 
     let upper_row = Box::builder()
         .orientation(Orientation::Horizontal)
@@ -77,8 +142,13 @@ pub fn build_ui(app: &adw::Application){
     upper_right_box.append(&join_button);
 
     upper_row.append(&upper_right_box);
-    content.append(&upper_row);
+    app_content.append(&upper_row);
 
+    let msg_list = ListBox::builder()
+        .vexpand(true)
+        .selection_mode(SelectionMode::None)
+        .css_classes(vec![String::from("boxed-list")])
+        .build();
     let scroll_box = ScrolledWindow::builder()
         .margin_top(16)
         .margin_end(24)
@@ -87,7 +157,7 @@ pub fn build_ui(app: &adw::Application){
         .child(&msg_list)
         .build();
 
-    content.append(&scroll_box);
+    app_content.append(&scroll_box);
 
     let bottom_row = Box::builder()
         .orientation(Orientation::Horizontal)
@@ -125,16 +195,9 @@ pub fn build_ui(app: &adw::Application){
         .build();
     bottom_row.append(&encryption_toggle);
 
-    content.append(&bottom_row);
+    app_content.append(&bottom_row);
     
-    let window = ApplicationWindow::builder()
-        .application(app)
-        .title(APP_TITLE)
-        .default_width(350)
-        .content(&content)
-        .build();
-
-    window.show();
+    content.append(&app_content);
     
     timeout_add_local( Duration::from_millis(SLEEP_DURATION), move || {
         while let Some(txt) = MSG_QUEUE.pop() {

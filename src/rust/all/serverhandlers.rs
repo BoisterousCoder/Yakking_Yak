@@ -1,7 +1,7 @@
 extern crate chrono;
 
-use crate::lib::store::Crypto;
-use crate::lib::utils::{decodeBase64, Address, split_and_clean, log};
+use crate::all::store::Crypto;
+use crate::all::utils::{decodeBase64, Address, split_and_clean, log};
 use std::str;
 use std::convert::TryInto;
 use base64;
@@ -58,9 +58,9 @@ impl ServerMsg{
 		let addr_segments: Vec<&str> = split_and_clean(segments[0], '@');
 		let content_data = decodeBase64(segments[2]);
 
-		let name = decodeBase64(addr_segments[0]);
-		let device_id = addr_segments[1].parse().unwrap();
-		let from = Address::new(&name, device_id);
+		// let name = decodeBase64(addr_segments[0]);
+		// let device_id = baddr_segments[1].parse().unwrap();
+		let from = Address::from_sendable(segments[0].to_string());
 
 		let content = match segments[1] {
 			INSECURE_LABEL => MsgContent::InsecureText(content_data),
