@@ -7,11 +7,11 @@ edition = "2018"
 
 [[bin]]
 name = "Yakking_Yak"
-path = "src/rust/gtk.rs"
+path = "src/rust/gtk_main.rs"
 
 [lib]
 crate-type = ["cdylib"]
-path = "src/rust/web.rs"
+path = "src/rust/web_main.rs"
 
 [dependencies]
 serde = {version = "1.0.115",  features = ["derive"]}
@@ -24,6 +24,7 @@ aes-gcm = "0.10.1"
 hkdf = "0.12.3"
 sha2 = "0.10.7"
 chrono = "0.4.26"
+magic-crypt = "3.1.5"
 getrandom = { version = "0.2", features = ["js"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

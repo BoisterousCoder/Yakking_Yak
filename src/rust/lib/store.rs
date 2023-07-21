@@ -3,6 +3,11 @@ use std::str;
 use x25519_dalek::PublicKey;
 use serde::{Serialize, Deserialize};
 
+#[cfg(not(target_arch = "wasm32"))]
+use crate::gtk::save::GroupSave;
+#[cfg(target_arch = "wasm32")]
+use crate::web::save::GroupSave;
+
 use super::utils::{Address, log, split_and_clean};
 use super::ratchet::Ratchet;
 use super::ForeinAgent::ForeinAgent;
@@ -20,11 +25,11 @@ pub struct Crypto{
 	msgs: Vec<ServerMsg>
 }
 impl Crypto{
-	pub fn new(name:&str, device_id:i32, rand_num:u64) -> Crypto{
+	pub fn new(name:&str, device_id:i32, seed:u64, proxy_seed:u64) -> Crypto{
 		let self_addr = Address::new(name, device_id);
-		let proxy = KeyBundle::new_self_key_set(self_addr.clone(), rand_num);
+		let proxy = KeyBundle::new_self_key_set(self_addr.clone(), proxy_seed);
 		if let SecretKey::Ephemeral(proxy_private) = proxy.secret{
-			let self_data = KeyBundle::new_self_key_set(self_addr, rand_num);
+			let self_data = KeyBundle::new_self_key_set(self_addr, seed);
 			let shared_secret= proxy_private.diffie_hellman(&self_data.public_key);
 			let salt = SALT_STRING.as_bytes().to_vec();
 			let proxy_ratchet = Ratchet::new(&shared_secret, false, salt);
@@ -57,6 +62,7 @@ impl Crypto{
 		self.agents.push(ForeinAgent{
 			to_ratchet:None,
 			from_ratchet:None,
+			is_online: true,
 			keys:KeyBundle{
 				address:addr, 
 				secret: SecretKey::Empty(),
@@ -93,8 +99,10 @@ impl Crypto{
 	pub fn get_msgs(&self) -> Vec<ServerMsg>{
 		return self.msgs.clone();
 	}
-	pub fn empty_msgs(&mut self){
-		return self.msgs = vec![];
+	pub fn new_group(&mut self, seed:u64, proxy_seed:u64){
+		let addr = self.get_address();
+		let new_state = Self::new(&addr.name, addr.device_id, seed, proxy_seed);
+		*self = new_state;
 	}
 	fn keys(&self, forien:&Address) -> Option<&KeyBundle>{
 		if forien.eq(&self.self_data.address) {
@@ -127,16 +135,8 @@ impl Crypto{
 			None => "unknown".to_string()
 		};
 	}
-	pub fn list_people(&self) -> String{
-		let mut s = String::new();
-		for agent in &self.agents {
-			s = format!("{}{}: {}@{}\n",
-				s, 
-				self.relation(&agent.keys.address),
-				agent.keys.address.name, 
-				agent.keys.address.device_id);
-		}
-		return s;
+	pub fn get_agents(&self) -> Vec<ForeinAgent>{
+		return  self.agents.clone();
 	}
 	pub fn encrypt(&mut self, text:String) -> Vec<SecureMsgIdentifier> {
 		let mut msg_ids = vec![];
@@ -209,5 +209,19 @@ impl Crypto{
 		}
 		log("Could not find ratchet source!");
 		None
+	}
+	pub fn group_as_save(&self, group_name:&str) -> GroupSave{
+		return GroupSave{
+			addr:self.self_data.address.clone(),
+			group:group_name.to_string(),
+    		proxy_ratchet:self.proxy_ratchet.clone(),
+			agents: self.agents.clone(),
+			msgs: self.msgs.clone()
+		};
+	}
+	pub fn load_group_save(&mut self, save:GroupSave){
+		self.msgs = save.msgs;
+		self.agents = save.agents;
+		self.proxy_ratchet = save.proxy_ratchet;
 	}
 }

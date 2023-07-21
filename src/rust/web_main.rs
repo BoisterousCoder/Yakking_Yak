@@ -8,6 +8,7 @@ use js_sys::{Function, Array};
 use std::{thread, format};
 
 mod lib;
+mod web;
 
 use crate::lib::store::Crypto;
 use crate::lib::serverhandlers::{ServerMsg, MsgContent};

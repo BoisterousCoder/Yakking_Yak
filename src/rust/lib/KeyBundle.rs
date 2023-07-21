@@ -19,15 +19,35 @@ pub struct KeyBundle{
 	pub address: Address
 }
 impl KeyBundle{
-	pub fn new_self_key_set(addr:Address, randNum:u64) -> KeyBundle{
+	pub fn new_self_key_set(addr:Address, seed:u64) -> KeyBundle{
 		log("Creating Ephemeral Key..");
-		let rng = ChaCha20Rng::seed_from_u64(randNum);
+		let rng: ChaCha20Rng = ChaCha20Rng::seed_from_u64(seed);
 		let secret = EphemeralSecret::new(rng);
 		log("Creating Public Key..");
 		return KeyBundle{
 			public_key: PublicKey::from(&secret),
 			secret: SecretKey::Ephemeral(secret),
 			address: addr
+		};
+	}
+}
+impl Clone for KeyBundle{
+	fn clone(&self) -> Self {
+		let secret_key = match &self.secret {
+			SecretKey::Shared(shared) => {
+				let bytes = shared.as_bytes();
+				SecretKey::Shared(SharedSecret::from(bytes.clone()))
+			}
+			SecretKey::Ephemeral(ephemeral) => {
+				let bytes = ephemeral.as_bytes();
+				SecretKey::Ephemeral(EphemeralSecret::from(bytes.clone()))
+			},
+			_ => SecretKey::Empty()
+		};
+		return Self{
+			public_key: self.public_key.clone(),
+			address: self.address.clone(),
+			secret:secret_key
 		};
 	}
 }
