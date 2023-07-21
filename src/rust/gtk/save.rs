@@ -16,6 +16,7 @@ use std::fs;
 use std::error::Error;
 use std::fs::File;
 use std::path::Path;
+use std::thread;
 
 const SAVE_DIR:&str = "./saves";
 const FILE_EXT:&str = "msglog";
@@ -40,16 +41,18 @@ impl GroupSave {
         let plain_data = serde_json::to_string(&self).unwrap();
         let hashed_password = calc_hash(&password);
 
-        if !Path::new(SAVE_DIR).is_dir() {
-            fs::create_dir(SAVE_DIR)?;
-        }
-
-        let mut file = File::create(Self::filename(&self.addr, &self.group))?;
-     	let key = new_magic_crypt!(hashed_password, 256);
-     	let data = key.encrypt_str_to_base64(plain_data);
-
-     	file.write_all(data.as_bytes())?;
-     	file.sync_all()?;
+        
+        thread::spawn(move || {
+            if !Path::new(SAVE_DIR).is_dir() {
+                fs::create_dir(SAVE_DIR).expect("Failed to create directory!");
+            }
+            let mut file = File::create(Self::filename(&self.addr, &self.group)).expect("Failed to get or create file");
+            let key = new_magic_crypt!(hashed_password, 256);
+            let data = key.encrypt_str_to_base64(plain_data);
+    
+            file.write_all(data.as_bytes()).expect("Failed to write to file");
+            file.sync_all().expect("Failed to release file from control");
+        });
         Ok(())
     }
     pub fn load(address:Address, group:&str, password:&str) -> Option<Self>{
