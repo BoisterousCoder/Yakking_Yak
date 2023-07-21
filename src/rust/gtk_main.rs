@@ -66,10 +66,10 @@ lazy_static! {
     
         Arc::new(socket_builder.connect().expect("Unable to connect to server"))
     }; 
-    // static ref SOCKET_CLIENT:Mutex<Option<Client>> = Mutex::new(None);
 }
 
 fn main() -> ExitCode {
+    //The first emit doesn't seem to run right. This is a bypass for this.
     SOCKET_CLIENT.emit("TEST", "WARMUP").unwrap();
 
     let app = Application::builder()
@@ -135,22 +135,24 @@ fn update_msg_display(msg_list:&ListBox, user_list:&Popover, state:&Crypto){
     
     let user_list_box = Box::new(Orientation::Vertical, 5);
     for agent in state.get_agents(){
-        let relation = state.relation(&agent.keys.address);
-        let relation_display = if &relation == "self" || &relation == "trusted" {
-            relation
-        }else{
-            "untrusted".to_string()
-        };
-        let user_display = format!("{}--{}",
-            relation_display,
-            agent.keys.address.name);
-        let user_button = Button::builder()
-            .label(user_display)
-            .halign(::gtk::Align::Start)
-            .hexpand(true)
-            .build();
-        user_button.connect_clicked(move |_| on_user_click(&agent.keys.address));
-        user_list_box.append(&user_button);
+        if agent.is_online{
+            let relation = state.relation(&agent.keys.address);
+            let relation_display = if &relation == "self" || &relation == "trusted" {
+                relation
+            }else{
+                "untrusted".to_string()
+            };
+            let user_display = format!("{}--{}",
+                relation_display,
+                agent.keys.address.name);
+            let user_button = Button::builder()
+                .label(user_display)
+                .halign(::gtk::Align::Start)
+                .hexpand(true)
+                .build();
+            user_button.connect_clicked(move |_| on_user_click(&agent.keys.address));
+            user_list_box.append(&user_button);
+        }
     }
     user_list.set_child(Some(&user_list_box));
     
@@ -181,7 +183,6 @@ fn display_msg(msg_list:&ListBox, msg:ServerMsg, state:&Crypto){
 
 fn on_user_click(from:&Address){
     let state = &mut STATE.lock().unwrap();
-    //log(&format!("clicked on {}\n All people known:\n{}", from.name, state.list_people()));
     if state.relation(from) == "allowedTrust".to_string(){
         let content = match state.trust(from.name.to_string()) {
             Some(forein) => Some(MsgContent::Trust(forein.clone())),

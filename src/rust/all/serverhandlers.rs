@@ -69,15 +69,22 @@ impl ServerMsg{
 					return None
 				}
 			},
-			JOIN_LABEL => MsgContent::Join(content_data),
+			JOIN_LABEL => {
+				state.set_is_online(&from, true);
+				MsgContent::Join(content_data)
+			},
 			PUBLIC_KEY_LABEL => {
 				if from != state.get_address(){
 					state.add_public_key(from.clone(), decode_to_public_key_bytes(content_data.clone()));
 				}
+				state.set_is_online(&from, true);
 				MsgContent::PublicKey(content_data)
 			},
 			TRUST_LABEL => MsgContent::Trust(Address::from_sendable(content_data)),
-			LEAVE_LABEL => MsgContent::Leave(content_data),
+			LEAVE_LABEL => {
+				state.set_is_online(&from, false);
+				MsgContent::Leave(content_data)
+			},
 			BLANK_LABEL => MsgContent::Blank(),
 			&_ => MsgContent::Blank()
 		};

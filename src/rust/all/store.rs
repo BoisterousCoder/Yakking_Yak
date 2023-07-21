@@ -12,7 +12,7 @@ use super::utils::{Address, log, split_and_clean};
 use super::ratchet::Ratchet;
 use super::forein_agent::ForeinAgent;
 use super::key_bundle::{KeyBundle, SecretKey};
-use super::serverhandlers::{ServerMsg, SecureMsgIdentifier};
+use super::serverhandlers::{ServerMsg, SecureMsgIdentifier, MsgContent};
 
 const SALT_STRING:&str = "This is a temporary salt until I figure out what to put here";
 
@@ -216,17 +216,35 @@ impl Crypto{
 		None
 	}
 	pub fn group_as_save(&self, group_name:&str) -> GroupSave{
-		return GroupSave{
+		let mut save = GroupSave{
 			addr:self.self_data.address.clone(),
 			group:group_name.to_string(),
     		proxy_ratchet:self.proxy_ratchet.clone(),
 			agents: self.agents.clone(),
 			msgs: self.msgs.clone()
 		};
+		for agent in &mut save.agents {
+			agent.is_online = false;
+		}
+		save.msgs = save.msgs.iter().filter_map(|msg|{
+			match msg.content {
+				MsgContent::Join(_) => None,
+				MsgContent::Leave(_) => None,
+				_ => Some(msg.clone())
+			}
+		}).collect();
+		return save;
 	}
 	pub fn load_group_save(&mut self, save:GroupSave){
 		self.msgs = save.msgs;
 		self.agents = save.agents;
 		self.proxy_ratchet = save.proxy_ratchet;
+	}
+	pub fn set_is_online(&mut self, addr:&Address, is_online:bool){
+		for agent in self.agents.iter_mut(){
+			if &agent.keys.address == addr {
+				agent.is_online = is_online;
+			}
+		}
 	}
 }
