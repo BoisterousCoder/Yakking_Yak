@@ -15,7 +15,7 @@ use crate::all::utils::log;
 
 const SEED:u64 = 1234567890; //TODO: fix the seed to its actually random
 const PROXY_SEED:u64 = 0987654321; //TODO: fix the seed to its actually random
-const DEVICE_ID:[u8; 32] = [0u8; 32];//TODO: Make this useful
+const DEVICE_ID:[u8; 32] = [1u8; 32];//TODO: Make this useful
 const PASSWORD:&str = "ABCDE";
 
 #[wasm_bindgen(start)]
@@ -60,7 +60,7 @@ pub fn handleEvent(_state:&str, send_msg:Function, event_name:&str, value:&str) 
 				if let MsgContent::Join(_) = msg.content {
 					let content_to_send = MsgContent::PublicKey(state.public_key());
 					let msg_to_send = ServerMsg::new(&state.get_address(), content_to_send);
-					send_msg.call1(&JsValue::null(), &msg_to_send.to_writable(&state).into());
+					send_msg.call1(&JsValue::null(), &msg_to_send.to_string(&state).into());
 				}
 			}
 		},
@@ -75,13 +75,13 @@ pub fn handleEvent(_state:&str, send_msg:Function, event_name:&str, value:&str) 
 				false => MsgContent::InsecureText(value.to_string())
 			};
 			let msg =  ServerMsg::new(&state.get_address(), content);
-			send_msg.call1(&JsValue::null(), &msg.to_writable(&state).into());
+			send_msg.call1(&JsValue::null(), &msg.to_string(&state).into());
 		},
 		"groupInput" => {
 			log("Group Change" );
 			let content = MsgContent::Join(value.to_string());
 			let msg =  ServerMsg::new(&state.get_address(), content);
-			send_msg.call1(&JsValue::null(), &msg.to_writable(&state).into());
+			send_msg.call1(&JsValue::null(), &msg.to_string(&state).into());
 			state.new_group(SEED, PROXY_SEED);
 		},
 		"isEncrypting" => {
@@ -99,7 +99,7 @@ pub fn handleEvent(_state:&str, send_msg:Function, event_name:&str, value:&str) 
 			};
 			if content.is_some() {
 				let msg = ServerMsg::new(&state.get_address(), content.unwrap());
-				send_msg.call1(&JsValue::null(), &msg.to_writable(&state).into());
+				send_msg.call1(&JsValue::null(), &msg.to_string(&state).into());
 			}
 			log(&serde_json::to_string(&state).unwrap());
 		}

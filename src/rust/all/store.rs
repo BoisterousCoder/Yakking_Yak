@@ -1,5 +1,7 @@
 use std::str;
 
+use k256::ecdsa::VerifyingKey;
+use k256::ecdsa::{Signature, SigningKey, signature::Signer};
 use x25519_dalek::PublicKey;
 use serde::{Serialize, Deserialize};
 
@@ -23,11 +25,16 @@ pub struct Crypto{
 	self_data:KeyBundle,
 	proxy_ratchet:Ratchet,
 	agents: Vec<ForeinAgent>,
+	device_id:[u8; 32],
 	msgs: Vec<ServerMsg>
 }
 impl Crypto{
 	pub fn new(name:&str, password:&str, device_id:[u8; 32], seed:u64, proxy_seed:u64) -> Crypto{
-		let self_addr = Address::new(name, device_id);
+		let sign_key = SigningKey::from_bytes(device_id.as_ref().into()).unwrap();
+		let verify_key = VerifyingKey::from(&sign_key);
+		let verify_key_bytes = verify_key.to_sec1_bytes();
+
+		let self_addr = Address::new(name, verify_key_bytes.to_vec());
 		let proxy = KeyBundle::new_self_key_set(self_addr.clone(), proxy_seed);
 		if let SecretKey::Ephemeral(proxy_private) = proxy.secret{
 			let self_data = KeyBundle::new_self_key_set(self_addr, seed);
@@ -37,6 +44,7 @@ impl Crypto{
 
 			let mut state = Crypto{
 				self_data,
+				device_id,
 				password:password.to_string(),
 				proxy_ratchet,
 				agents: vec!(),
@@ -94,6 +102,12 @@ impl Crypto{
 		}
 		None
 	}
+	pub fn sign(&self, msg:&str)-> String{
+		let key = SigningKey::from_bytes(self.device_id.as_ref().into()).unwrap();
+		let signature:Signature = key.sign(msg.as_bytes());
+		#[allow(deprecated)]
+		base64::encode(signature.to_bytes())
+	}
 	pub fn add_msg(&mut self, msg:ServerMsg){
 		self.msgs.push(msg);
 		self.msgs.sort_by(|a, b| a.time_stamp.cmp(&b.time_stamp))
@@ -103,7 +117,7 @@ impl Crypto{
 	}
 	pub fn new_group(&mut self, seed:u64, proxy_seed:u64){
 		let addr = self.get_address();
-		let new_state = Self::new(&addr.name, &self.password, addr.device_id, seed, proxy_seed);
+		let new_state = Self::new(&addr.name, &self.password, self.device_id, seed, proxy_seed);
 		*self = new_state;
 	}
 	fn keys(&self, forien:&Address) -> Option<&KeyBundle>{

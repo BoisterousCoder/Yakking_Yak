@@ -6,7 +6,7 @@ use magic_crypt::MagicCryptTrait;
 use magic_crypt::new_magic_crypt;
 use rand_core::{RngCore, OsRng};
 
-use crate::{SignInDetails, STATE, all::store::Crypto};
+use crate::{SignInDetails, STATE, all::{store::Crypto, utils::calc_hash}};
 
 use super::build_ui::build_content;
 
@@ -58,7 +58,7 @@ fn on_sign_in_attempt(sign_in_button:&Button) -> Option<SignInDetails>{
         let device_id_str = base64::encode(device_id);
 
         let mut file = File::create(&filename).expect("unable to create file");
-        let key = new_magic_crypt!(&password, 256);
+        let key = new_magic_crypt!(calc_hash(&password), 256);
         let data = key.encrypt_str_to_base64(device_id_str);
         
         file.write_all(data.as_bytes()).unwrap();

@@ -29,7 +29,7 @@ const SLEEP_DURATION:u64 = 1500;//In mils
 const SEED:u64 = 1234567890; //TODO: fix the seed to its actually random
 const PASSWORD:&str = "ABCDE";
 const PROXY_SEED:u64 = 0987654321; //TODO: fix the seed to its actually random
-const DEVICE_ID:[u8; 32] = [0u8; 32];//TODO: Make this useful
+const DEVICE_ID:[u8; 32] = [1u8; 32];//TODO: Make this useful
 const MSG_TYPES:[char; 6] = ['i', 's', 't', 'l', 'p', 'j'];
 const SOCKET_SERVER_ADDRESS:&'static str = "http://localhost:4000";
 const IS_AUTO_SAVING:bool = true;
@@ -190,7 +190,7 @@ fn on_user_click(from:&Address){
         };
         if content.is_some() {
             let msg = ServerMsg::new(&state.get_address(), content.unwrap());
-            SOCKET_CLIENT.emit("t",msg.to_writable(&state)).expect("failed to send join message");
+            SOCKET_CLIENT.emit("t",msg.to_string(&state)).expect("failed to send join message");
         }
     }else{
         log(&format!("Can't trust {} because you already trust them, you dont have their primary key, or it's you. Can't trust yourself after all.", from.name))

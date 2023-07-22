@@ -5,7 +5,7 @@ use crate::all::utils::{decode_base64, Address, split_and_clean, log};
 use std::str;
 use std::convert::TryInto;
 use base64;
-use chrono::{NaiveDateTime, Local};
+use chrono::{NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 const INSECURE_LABEL:&str = "i";
@@ -40,10 +40,11 @@ pub struct ServerMsg{
 	pub content:MsgContent,
 	pub time_stamp:i64
 }
-
+// Message format is
+//*address*label*content*time*signature*
 impl ServerMsg{
 	pub fn new(from:&Address, content:MsgContent) -> ServerMsg{
-		let time_stamp = Local::now().timestamp_millis();
+		let time_stamp = Utc::now().timestamp_millis();
 		return ServerMsg{
 			from: from.clone(),
 			content,
@@ -52,12 +53,17 @@ impl ServerMsg{
 	}
 	pub fn from_server(txt:&str, state:&mut Crypto) -> Option<ServerMsg>{
 		let segments: Vec<&str> = split_and_clean(txt, '*');
-		if segments.len() < 4 {
+		if segments.len() < 4 && segments[1] != BLANK_LABEL{
 			return None;
 		}
 		let content_data = decode_base64(segments[2]);
 		
 		let from = Address::from_sendable(segments[0].to_string());
+		let pre_signed_msg = format!("*{}*", segments[..4].join("*"));
+		if !from.verify(segments[4], &pre_signed_msg){
+			log("failed to verify msg");
+			return None;
+		}
 
 		let content = match segments[1] {
 			INSECURE_LABEL => MsgContent::InsecureText(content_data),
@@ -89,10 +95,16 @@ impl ServerMsg{
 			&_ => MsgContent::Blank()
 		};
 
+		let time_stamp = if segments.len() > 2 {
+			segments[3].parse::<i64>().expect("timestamp is invalid")
+		}else{
+			Utc::now().timestamp_millis()
+		};
+
 		let msg = ServerMsg{
 			from, 
 			content,
-			time_stamp: segments[3].parse::<i64>().expect("timestamp is invalid")
+			time_stamp
 		};
 		state.add_msg(msg.clone());
 
@@ -123,7 +135,14 @@ impl ServerMsg{
 			MsgContent::Blank() => (BLANK_LABEL, String::from("_"))
 		};
 		#[allow(deprecated)]
-		return format!("*{}*{}*{}*", self.from.as_sendable(), kind, base64::encode(body.as_bytes()))
+		let pre_signed_msg = format!("*{}*{}*{}*{}*", 
+			self.from.as_sendable(), 
+			kind, 
+			base64::encode(body.as_bytes()),
+			Utc::now().timestamp());
+		let signature = state.sign(&pre_signed_msg);
+		return format!("{}{}*", pre_signed_msg, signature);
+		
 	}
 	pub fn display(&self, state:&Crypto) -> Option<String>{
 		let msg_data = match &self.content {
@@ -177,9 +196,6 @@ impl ServerMsg{
 			},
 			None => None
 		};
-	}
-	pub fn to_writable(self, state:&Crypto) -> String {
-		self.to_string(state)
 	}
 }
 

@@ -5,12 +5,11 @@ use crate::all::forein_agent::ForeinAgent;
 use crate::all::serverhandlers::ServerMsg;
 use crate::all::ratchet::Ratchet;
 use crate::all::utils::Address;
+use crate::all::utils::calc_hash;
 
 use magic_crypt::MagicCryptTrait;
 use magic_crypt::new_magic_crypt;
 
-use std::hash::{Hash, Hasher};
-use std::collections::hash_map::DefaultHasher;
 use std::io::prelude::*;
 use std::fs;
 use std::error::Error;
@@ -30,18 +29,11 @@ pub struct GroupSave {
 	pub msgs: Vec<ServerMsg>
 }
 
-fn calc_hash(text:&str) -> String{
-    let mut hasher = DefaultHasher::new();
-    text.to_string().hash(&mut hasher);
-    format!("{}", hasher.finish())
-}
-
 impl GroupSave {
     pub fn save(self, password:&str) -> Result<(), Box<dyn Error>>{
         let plain_data = serde_json::to_string(&self).unwrap();
         let hashed_password = calc_hash(&password);
 
-        
         thread::spawn(move || {
             if !Path::new(SAVE_DIR).is_dir() {
                 fs::create_dir(SAVE_DIR).expect("Failed to create directory!");
@@ -76,7 +68,7 @@ impl GroupSave {
         #[allow(deprecated)]
         let safe_group = base64::encode(group);
         #[allow(deprecated)]
-        let filename = &format!("{}@{}", addr.as_sendable(), base64::encode(safe_group));
+        let filename = &format!("{}@{}", base64::encode(addr.name()), base64::encode(safe_group));
         format!("{}/{}.{}", SAVE_DIR, filename, FILE_EXT)
     }
 }
