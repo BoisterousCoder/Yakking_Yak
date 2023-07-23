@@ -6,9 +6,9 @@ use x25519_dalek::PublicKey;
 use serde::{Serialize, Deserialize};
 
 #[cfg(not(target_arch = "wasm32"))]
-use crate::gtk::save::GroupSave;
+use crate::client_gtk::save::GroupSave;
 #[cfg(target_arch = "wasm32")]
-use crate::web::save::GroupSave;
+use crate::client_web::save::GroupSave;
 
 use super::utils::{Address, log, split_and_clean};
 use super::ratchet::Ratchet;

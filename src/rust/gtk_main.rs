@@ -1,12 +1,12 @@
 #![cfg(not(target_arch = "wasm32"))]
 
-use crate::gtk::build_ui::build_sign_in;
+use crate::client_gtk::build_ui::build_sign_in;
 use ::gtk::{glib::ExitCode, prelude::*, Button, CheckButton, Entry};
 use adw::{ActionRow, Application};
 use ::gtk::{Box, ListBox, Orientation, Popover};
 use rand_core::{OsRng, RngCore};
-use crate::gtk::save::GroupSave;
-use all::utils::Address;
+use crate::client_gtk::save::GroupSave;
+use client::utils::Address;
 use std::sync::{Mutex, Arc};
 use rust_socketio::client::Client;
 use rust_socketio::{ClientBuilder, Payload};
@@ -15,12 +15,12 @@ use crossbeam_queue::SegQueue;
 #[macro_use]
 extern crate lazy_static;
 
-mod all;
-mod gtk;
+mod client;
+mod client_gtk;
 
-use crate::all::store::Crypto;
-use crate::all::serverhandlers::{ServerMsg, MsgContent};
-use crate::all::utils::log;
+use crate::client::store::Crypto;
+use crate::client::serverhandlers::{ServerMsg, MsgContent};
+use crate::client::utils::log;
 
 static APP_ID: &str = "com.BoisterousCoder.YakkingYak";
 static APP_TITLE: &str = "Yakking Yak";

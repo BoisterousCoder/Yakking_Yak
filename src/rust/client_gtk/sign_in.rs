@@ -6,7 +6,7 @@ use magic_crypt::MagicCryptTrait;
 use magic_crypt::new_magic_crypt;
 use rand_core::{RngCore, OsRng};
 
-use crate::{SignInDetails, STATE, all::{store::Crypto, utils::calc_hash}};
+use crate::{SignInDetails, STATE, client::{store::Crypto, utils::calc_hash}};
 
 use super::build_ui::build_content;
 

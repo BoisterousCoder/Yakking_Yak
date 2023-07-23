@@ -6,12 +6,12 @@ use wasm_bindgen::{prelude::*, JsValue};
 use js_sys::Function;
 use std::format;
 
-mod all;
-mod web;
+mod client;
+mod client_web;
 
-use crate::all::store::Crypto;
-use crate::all::serverhandlers::{ServerMsg, MsgContent};
-use crate::all::utils::log;
+use crate::client::store::Crypto;
+use crate::client::serverhandlers::{ServerMsg, MsgContent};
+use crate::client::utils::log;
 
 const SEED:u64 = 1234567890; //TODO: fix the seed to its actually random
 const PROXY_SEED:u64 = 0987654321; //TODO: fix the seed to its actually random

@@ -4,7 +4,7 @@ use serde::{
 	de::{self, Deserialize, Deserializer, Visitor, MapAccess}
 };
 // use web_sys::console;
-use crate::all::utils::{log, Address};
+use crate::client::utils::{log, Address};
 use x25519_dalek::{EphemeralSecret, PublicKey, SharedSecret};
 use rand_chacha::{ChaCha20Rng, rand_core::SeedableRng};
 

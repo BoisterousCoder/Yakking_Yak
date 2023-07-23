@@ -5,7 +5,7 @@ use glib::{self, timeout_add_local};
 use std::time::Duration;
 
 use crate::{on_join_group, on_send_msg, SOCKET_CLIENT, update_msg_display, SLEEP_DURATION, APP_TITLE, MSG_QUEUE, STATE};
-use crate::all::{serverhandlers::{ServerMsg, MsgContent}, utils::log};
+use crate::client::{serverhandlers::{ServerMsg, MsgContent}, utils::log};
 
 use super::sign_in::on_sign_in;
 

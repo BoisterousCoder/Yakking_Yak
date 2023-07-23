@@ -1,7 +1,7 @@
 #![cfg(target_arch = "wasm32")]
-use crate::all::utils::Address;
-use crate::all::ratchet::Ratchet;
-use crate::all::forein_agent::ForeinAgent;
+use crate::client::utils::Address;
+use crate::client::ratchet::Ratchet;
+use crate::client::forein_agent::ForeinAgent;
 use crate::ServerMsg;
 
 use serde::{Serialize, Deserialize};
